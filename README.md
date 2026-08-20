@@ -33,20 +33,20 @@ O **Bibliotech** é um componente de autenticação leve e responsivo projetado 
 
 ## ✨ Funcionalidades
 
-- 🔄 **Alternância Dinâmica de UI:** Chaveamento de formulário direto via manipulação de DOM[cite: 1, 2].
+- 🔄 **Alternância Dinâmica de UI:** Chaveamento de formulário direto via manipulação de DOM
 - 🛡️ **Validação em Camadas (Client & Server):**
   - Checagem do formato de e-mail por Regex (Front-end) e `filter_var` (Back-end).
-  - Validação de tamanhos mínimos de string e confirmação de senha[cite: 2, 3].
+  - Validação de tamanhos mínimos de string e confirmação de senha
 - ⚡ **Comunicação Assíncrona:** Requisições via `Fetch API` utilizando payloads JSON em verbos HTTP `POST`.
-- 📦 **Respostas Padronizadas:** Retornos em JSON estruturados (`sucesso`: bool, `mensagem`: string)[cite: 3, 4].
+- 📦 **Respostas Padronizadas:** Retornos em JSON estruturados (`sucesso`: bool, `mensagem`: string)
 
 ---
 
 ## 🛠️ Tecnologias
 
-- **Front-end:** HTML5 semântico, JavaScript moderno (ES6+, Async/Await, Fetch API)[cite: 1, 2].
-- **Back-end:** PHP 8.x[cite: 3, 4].
-- **Protocolo de Dados:** JSON (`application/json`)[cite: 2, 3, 4].
+- **Front-end:** HTML5 semântico, JavaScript moderno (ES6+, Async/Await, Fetch API)[
+- **Back-end:** PHP 8.x
+- **Protocolo de Dados:** JSON (`application/json`)
 
 ---
 
@@ -63,7 +63,7 @@ O **Bibliotech** é um componente de autenticação leve e responsivo projetado 
 ```[cite: 1, 2, 3, 4]
 
 ---
-
+ ```
 ## 🚀 Como Executar Localmente
 
 ### Pré-requisitos
@@ -72,7 +72,7 @@ O **Bibliotech** é um componente de autenticação leve e responsivo projetado 
 ### Passo a Passo
 
 1. **Clone o repositório:**
-   ```bash
+  bash
    git clone [https://github.com/seu-usuario/bibliotech.git](https://github.com/seu-usuario/bibliotech.git)
    cd bibliotech
 Inicie o servidor local do PHP:
@@ -83,7 +83,7 @@ Acesse no navegador:
 
 Plaintext
 http://localhost:8000
-⚠️ Atenção: Não abra o arquivo index.html diretamente via protocolo file:///, pois as chamadas assíncronas aos endpoints PHP serão bloqueadas[cite: 2].
+⚠️ Atenção: Não abra o arquivo index.html diretamente via protocolo file:///, pois as chamadas assíncronas aos endpoints PHP serão bloqueadas
 
 📌 Roadmap de Evolução
 [ ] Implementar persistência de dados em banco de dados SQLite/MySQL via PDO.
@@ -92,11 +92,11 @@ http://localhost:8000
 
 [ ] Adicionar controle de sessão de usuário (session_start()).
 
-[ ] Extrair estilos inline do index.html para um arquivo CSS externo[cite: 1].
+[ ] Extrair estilos inline do index.html para um arquivo CSS externo
 
 Visão Geral da Arquitetura Atual
-Front-end (index.html): Possui formulário único com alternância dinâmica de visibilidade de elementos[cite: 1, 2].
+Front-end (index.html): Possui formulário único com alternância dinâmica de visibilidade de elementos
 
-Cliente JS (js/script.js): Concentra o controle de DOM, validação e chamadas fetch[cite: 2].
+Cliente JS (js/script.js): Concentra o controle de DOM, validação e chamadas fetch
 
-Back-end (php/cadastrar.php e php/login.php): Revalida entradas via PHP e retorna dados em JSON[cite: 3, 4].
+Back-end (php/cadastrar.php e php/login.php): Revalida entradas via PHP e retorna dados em JSON
