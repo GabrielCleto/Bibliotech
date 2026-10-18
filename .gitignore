@@ -1,0 +1,21 @@
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+bibliotech-backend/.env
+bibliotech-backend/.env.*
+!bibliotech-backend/.env.example
+
+# Logs
+storage/logs/*.log
+*.log
+
+# Dependências
+vendor/
+
+# Arquivos temporários do SO e IDEs
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/

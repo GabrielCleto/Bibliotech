@@ -1,0 +1,15 @@
+# Esse arquivo diz pro Apache: qualquer endereço que comece com
+# "api/" (dentro da pasta do projeto, seja qual for o nome dela)
+# deve ser tratado pelo public/index.php, que decide qual parte do
+# código vai responder.
+#
+# Precisa do módulo "mod_rewrite" ligado (no XAMPP já vem ligado).
+
+RewriteEngine On
+
+# Só redireciona se NÃO for um arquivo ou pasta que já existe de verdade
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Qualquer coisa que comece com "api/" vai pro index.php
+RewriteRule ^api/ public/index.php [QSA,L]

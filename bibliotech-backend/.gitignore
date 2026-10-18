@@ -1,0 +1,25 @@
+# Variáveis de ambiente e segredos
+.env
+.env.backup
+.env.local
+.env.production
+
+# Logs da aplicação
+storage/logs/*.log
+*.log
+
+# Dependências do Composer (quando instalado)
+vendor/
+composer.phar
+
+# Arquivos temporários e do SO
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
