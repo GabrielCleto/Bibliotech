@@ -63,8 +63,8 @@ final class Criptografia
             return $textoCriptografado;
         }
 
-        $chave = hex2bin(self::CHAVE_HEX);
-        $iv = hex2bin(self::IV_HEX);
+        $chave = self::getChaveBin();
+        $iv = self::getIvBin();
 
         $bruto = base64_decode($textoCriptografado, true);
         if ($bruto === false) {
