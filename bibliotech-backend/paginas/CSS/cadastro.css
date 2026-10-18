@@ -1,0 +1,218 @@
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100vh;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #ffffff;
+    background: #241b45;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Permite rolar a tela se a caixa for maior que a tela */
+    padding: 40px 20px; /* Margem de respiro ao redor da caixa */
+    overflow-x: hidden;
+}
+
+/* BACKGROUND */
+.RENDER.BACKGROUND {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.RENDER.BACKGROUND::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(35, 24, 75, 0.15) 0%, rgba(48, 38, 100, 0.25) 35%, rgba(35, 55, 145, 0.45) 65%, rgba(20, 55, 170, 0.60) 100%);
+    z-index: 1;
+}
+
+.RENDER.BACKGROUND img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* CAIXA PRINCIPAL DO CADASTRO */
+form {
+    position: relative; /* Remove a posição absoluta e fixa para evitar sobreposição */
+    width: 100%;
+    max-width: 400px;
+    background: rgba(5, 17, 31, 0.96);
+    border-top: 3px solid #00a7b5;
+    border-radius: 6px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.48);
+    padding: 40px 34px 35px;
+    z-index: 3;
+}
+
+/* LOGO DENTRO DO FORM */
+.LOGO {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.LOGO img {
+    width: 140px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* TEXTO DO CADASTRO */
+.textologin {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.textologin h1 {
+    font-size: 24px;
+    font-weight: 400;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.textologin p {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+/* MENSAGEM DO PHP */
+#resultado {
+    text-align: center;
+    font-size: 11px;
+    color: #ff7777;
+    margin-bottom: 20px;
+    background: rgba(255, 119, 119, 0.1);
+    padding: 8px;
+    border-radius: 4px;
+}
+
+/* LABELS E CAMPOS COMUNS */
+form label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+form input, form select {
+    display: block;
+    width: 100%;
+    height: 40px;
+    margin: 0 0 15px 0;
+    padding: 0 11px;
+    color: #ffffff;
+    background: #071b25;
+    border: 1px solid #294354;
+    border-radius: 4px;
+    outline: none;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Deixa o ícone de calendário branco no input date */
+form input[type="date"] {
+    color-scheme: dark;
+}
+
+form input:focus, form select:focus {
+    border-color: #00a7b5;
+    background: #081f2a;
+    box-shadow: 0 0 0 2px rgba(0, 167, 181, 0.12);
+}
+
+/* FIELDSET DOS PAPEIS (Aluno, Prof, Biblio) */
+fieldset {
+    border: 1px solid #294354;
+    border-radius: 4px;
+    padding: 15px 15px 0 15px;
+    margin-bottom: 15px;
+    background: rgba(0, 0, 0, 0.15); /* Fundo sutil para destacar a caixa interna */
+}
+
+legend {
+    color: #00a7b5;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 8px;
+}
+
+/* BOTÃO CRIAR CONTA */
+form button {
+    display: block;
+    width: 100%;
+    height: 40px;
+    margin: 10px 0 15px 0;
+    border: none;
+    border-radius: 4px;
+    background: #008c9a;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+form button:hover {
+    background: #00a7b5;
+    box-shadow: 0 5px 15px rgba(0, 167, 181, 0.20);
+}
+
+form button:active {
+    transform: scale(0.98);
+}
+
+/* BOTÃO / LINK DE VOLTAR PARA LOGIN */
+.link-cadastro {
+    text-align: center;
+}
+
+.link-cadastro a {
+    display: block;
+    width: 100%;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 4px;
+    background: transparent;
+    border: 1px solid #294354;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.link-cadastro a:hover {
+    background: rgba(0, 167, 181, 0.1);
+    border-color: #00a7b5;
+    color: #00a7b5;
+}
+
+/* CELULARES PEQUENOS */
+@media (max-width: 450px) {
+    body {
+        padding: 20px 15px; /* Menos margem no mobile para dar espaço aos campos */
+    }
+    form {
+        padding: 30px 20px 25px;
+    }
+}

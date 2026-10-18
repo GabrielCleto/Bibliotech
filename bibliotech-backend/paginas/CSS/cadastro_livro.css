@@ -1,0 +1,181 @@
+/* ================= CSS ESPECÍFICO - CADASTRO DE LIVROS ================= */
+
+/* Botão Voltar */
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #00e5ff;
+    text-decoration: none;
+    font-weight: 600;
+    background: rgba(0, 229, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10;
+}
+
+.btn-voltar:hover {
+    background: rgba(0, 229, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+/* Alertas de Mensagens */
+.alert-message {
+    margin-top: 15px;
+    font-weight: 600;
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 50px;
+}
+
+.alert-success {
+    color: #00e5ff;
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+.alert-error {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Container do Formulário */
+.form-card {
+    padding: 30px;
+    margin-bottom: 30px;
+    border-color: rgba(0, 229, 255, 0.3);
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.form-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+}
+
+/* Grid do Formulário */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Inputs e Labels */
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 20;
+}
+
+.input-wrapper label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+}
+
+.glass-input, .glass-select {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s;
+    width: 100%;
+    cursor: pointer;
+}
+
+/* Evita que o select perca o cursor de texto no input text */
+.glass-input {
+    cursor: text; 
+}
+
+.glass-input:focus, .glass-select:focus {
+    border-color: #00e5ff;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+}
+
+/* Ocultar as setinhas chatas do input type="number" */
+.glass-input[type=number]::-webkit-inner-spin-button, 
+.glass-input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+.glass-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.glass-select option {
+    background: #0f172a;
+    color: #fff;
+}
+
+/* Realce para os inputs de "Novo Entry" (novo autor / novo genero) */
+.new-entry-input {
+    border-color: rgba(0, 229, 255, 0.4);
+    background: rgba(0, 229, 255, 0.05);
+}
+
+/* Ações / Botões */
+.form-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    position: relative;
+    z-index: 20;
+}
+
+.btn-cyan {
+    background: rgba(0, 229, 255, 0.1);
+    color: #00e5ff;
+    border: 1px solid #00e5ff;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-cyan:hover {
+    background: rgba(0, 229, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 229, 255, 0.2);
+}
+
+/* Responsivo para telemóveis */
+@media (max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        justify-content: center;
+    }
+    
+    .btn-submit {
+        width: 100%;
+        justify-content: center;
+    }
+}

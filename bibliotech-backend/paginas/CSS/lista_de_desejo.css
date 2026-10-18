@@ -1,0 +1,267 @@
+/* ================= CSS ESPECÍFICO - LISTA DE DESEJOS ================= */
+
+/* Botão Voltar */
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #00e5ff;
+    text-decoration: none;
+    font-weight: 600;
+    background: rgba(0, 229, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10;
+}
+
+.btn-voltar:hover {
+    background: rgba(0, 229, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+/* Alertas */
+.alert-message {
+    margin-top: 15px;
+    color: #00e5ff;
+    font-weight: 600;
+    background: rgba(0, 229, 255, 0.1);
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+/* Formulário de Adicionar Livro */
+.form-card {
+    padding: 24px;
+    margin-bottom: 30px;
+    border-color: rgba(0, 229, 255, 0.3);
+    /* Correção: Garante que o card fique acima de qualquer fundo invisível */
+    position: relative;
+    z-index: 10; 
+}
+
+.form-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 16px;
+}
+
+.input-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.glass-select {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+    /* Correção: Força o seletor a ser clicável */
+    position: relative;
+    z-index: 20;
+    cursor: pointer;
+}
+
+.glass-select:focus {
+    border-color: #00e5ff;
+}
+
+.glass-select option {
+    background: #0f172a;
+    color: #fff;
+}
+
+.btn-cyan {
+    background: rgba(0, 229, 255, 0.1);
+    color: #00e5ff;
+    border: 1px solid #00e5ff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Correção: Garante que o botão não seja bloqueado por divs sobrepostas */
+    position: relative;
+    z-index: 20;
+}
+
+.btn-cyan:hover {
+    background: rgba(0, 229, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 229, 255, 0.2);
+}
+
+/* Cards da Lista de Desejos */
+.wishlist-card {
+    display: flex;
+    flex-direction: row;
+    padding: 16px;
+    gap: 16px;
+    align-items: center;
+    position: relative;
+    z-index: 5;
+}
+
+.wishlist-capa {
+    width: 80px;
+    height: 115px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #071923;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wishlist-capa-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 5px;
+    color: rgba(255, 255, 255, 0.8);
+    background: linear-gradient(135deg, rgba(0, 167, 181, 0.18), rgba(20, 55, 170, 0.18));
+}
+
+.wishlist-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.book-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.book-author {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 12px;
+}
+
+.book-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 50px;
+}
+
+.badge-avail {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-queue {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-queue-empty {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Botão Remover */
+.remove-form {
+    margin-left: auto;
+    position: relative;
+    z-index: 10;
+}
+
+.btn-remove {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.btn-remove:hover {
+    background: #ef4444;
+    color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+/* Empty State */
+.empty-state {
+    align-items: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+    .input-group {
+        flex-direction: column;
+    }
+    .btn-cyan {
+        width: 100%;
+        justify-content: center;
+    }
+    .wishlist-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    .remove-form {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+    }
+    .btn-remove {
+        width: 100%;
+        border-radius: 12px;
+    }
+    .book-badges {
+        justify-content: center;
+    }
+}
+
+/* Ajuste forçado para a capa gerada pelo capas.js */
+.wishlist-capa img,
+.wishlist-capa .livro-capa-imagem {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    object-fit: cover !important; 
+    object-position: center !important;
+}

@@ -1,0 +1,93 @@
+/* ================= CSS ESPECÍFICO DE NOTIFICAÇÕES ================= */
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #00e5ff;
+    text-decoration: none;
+    font-weight: 600;
+    background: rgba(0, 229, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-voltar:hover {
+    background: rgba(0, 229, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.notification-card {
+    align-items: flex-start;
+    padding: 20px 24px;
+    border-left: 4px solid transparent;
+}
+
+/* Notificação não lida com borda Cyan */
+.notification-card.unread {
+    border-left-color: #00e5ff;
+    background: rgba(30, 41, 59, 0.6);
+}
+
+.noti-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+    gap: 16px;
+}
+
+.noti-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.noti-badge-new {
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.noti-date {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+}
+
+.noti-message {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+.empty-state {
+    align-items: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+/* Responsividade específica da notificação */
+@media (max-width: 600px) {
+    .noti-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}

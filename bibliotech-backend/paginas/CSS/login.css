@@ -1,0 +1,413 @@
+/* RESET */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #ffffff;
+    position: relative;
+    background: #241b45;
+}
+
+/* BACKGROUND
+   ROXO À ESQUERDA / AZUL À DIREITA */
+
+.RENDER.BACKGROUND {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.RENDER.BACKGROUND::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(35, 24, 75, 0.15) 0%,
+        rgba(48, 38, 100, 0.25) 35%,
+        rgba(35, 55, 145, 0.45) 65%,
+        rgba(20, 55, 170, 0.60) 100%
+    );
+    z-index: 1;
+    pointer-events: none;
+}
+
+.RENDER.BACKGROUND img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+
+/* LOGO CPS */
+
+.LOGO {
+    position: absolute;
+    top: calc(50% - 220px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.LOGO img {
+    width: 155px;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+}
+
+
+/* TEXTO DO LOGIN */
+
+.textologin {
+    position: absolute;
+    top: calc(50% - 110px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 332px;
+    max-width: calc(100% - 40px);
+    z-index: 6;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.textologin h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.textologin p {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+
+/* CAIXA PRINCIPAL DO LOGIN */
+
+form {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 500px;
+    padding: 195px 34px 35px;
+    background: rgba(5, 17, 31, 0.96);
+    border-top: 3px solid #00a7b5;
+    border-radius: 6px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.48);
+    z-index: 3;
+}
+
+
+/* LABELS */
+
+form label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+form label:first-of-type {
+    margin-top: 8px;
+}
+
+
+/* CAMPOS */
+
+form input {
+    display: block;
+    width: 100%;
+    height: 40px;
+    margin: 0 0 15px 0;
+    padding: 0 11px;
+    color: #ffffff;
+    background: #071b25;
+    border: 1px solid #294354;
+    border-radius: 4px;
+    outline: none;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+form input::placeholder {
+    color: #777777;
+}
+
+form input:hover {
+    border-color: #356074;
+}
+
+form input:focus {
+    border-color: #00a7b5;
+    background: #081f2a;
+    box-shadow: 0 0 0 2px rgba(0, 167, 181, 0.12);
+}
+
+
+/* BOTÃO ENTRAR */
+
+form button {
+    display: block;
+    width: 100%;
+    height: 40px;
+    margin: 5px 0 10px 0;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: #008c9a;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+form button:hover {
+    background: #00a7b5;
+    box-shadow: 0 5px 15px rgba(0, 167, 181, 0.20);
+}
+
+form button:active {
+    transform: scale(0.98);
+}
+
+
+/* BOTÃO / LINK DE CADASTRO */
+
+.link-cadastro {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.link-cadastro a {
+    display: block;
+    width: 100%;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 4px;
+    background: transparent;
+    border: 1px solid #294354;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.link-cadastro a:hover {
+    background: rgba(0, 167, 181, 0.1);
+    border-color: #00a7b5;
+    color: #00a7b5;
+}
+
+
+/* MENSAGEM DO PHP */
+
+#resultado {
+    position: absolute;
+    top: calc(50% + 265px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    max-width: calc(100% - 30px);
+    margin: 0;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #ff7777;
+    z-index: 10;
+}
+
+
+/* TABLETS E CELULARES */
+
+@media (max-width: 600px) {
+    body {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    form {
+        top: 50%;
+        width: calc(100% - 30px);
+        max-width: 400px;
+        height: 500px;
+        padding: 195px 25px 30px;
+    }
+
+    .LOGO {
+        top: calc(50% - 220px);
+        width: 160px;
+        height: 90px;
+    }
+
+    .LOGO img {
+        width: 140px;
+    }
+
+    .textologin {
+        top: calc(50% - 110px);
+        width: calc(100% - 80px);
+        max-width: 330px;
+    }
+
+    .textologin h1 {
+        font-size: 22px;
+    }
+
+    .textologin p {
+        font-size: 10px;
+    }
+
+    #resultado {
+        top: calc(50% + 265px);
+        width: calc(100% - 30px);
+        max-width: 400px;
+    }
+}
+
+
+/* CELULARES PEQUENOS */
+
+@media (max-width: 380px) {
+    form {
+        width: calc(100% - 24px);
+        height: 485px;
+        padding-top: 185px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .LOGO {
+        top: calc(50% - 215px);
+        width: 150px;
+        height: 85px;
+    }
+
+    .LOGO img {
+        width: 125px;
+    }
+
+    .textologin {
+        top: calc(50% - 105px);
+        width: calc(100% - 60px);
+    }
+
+    .textologin h1 {
+        font-size: 20px;
+    }
+
+    .textologin p {
+        font-size: 9px;
+    }
+
+    #resultado {
+        top: calc(50% + 255px);
+    }
+}
+
+
+/* TELAS DE DESKTOP COM POUCA ALTURA */
+
+@media (max-height: 700px) and (min-width: 601px) {
+    form {
+        height: 470px;
+        padding-top: 175px;
+    }
+
+    .LOGO {
+        top: calc(50% - 210px);
+    }
+
+    .LOGO img {
+        width: 130px;
+    }
+
+    .textologin {
+        top: calc(50% - 100px);
+    }
+
+    .textologin h1 {
+        font-size: 22px;
+    }
+
+    #resultado {
+        top: calc(50% + 245px);
+    }
+}
+
+
+/* TELAS MUITO BAIXAS*/
+
+@media (max-height: 560px) and (min-width: 601px) {
+    form {
+        height: 430px;
+        padding-top: 155px;
+    }
+
+    .LOGO {
+        top: calc(50% - 195px);
+        height: 85px;
+    }
+
+    .LOGO img {
+        width: 120px;
+    }
+
+    .textologin {
+        top: calc(50% - 95px);
+    }
+
+    .textologin h1 {
+        font-size: 21px;
+    }
+
+    .textologin p {
+        font-size: 9px;
+    }
+
+    #resultado {
+        top: calc(50% + 225px);
+    }
+}
