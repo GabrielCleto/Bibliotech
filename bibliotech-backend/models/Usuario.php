@@ -9,6 +9,9 @@
  */
 class Usuario
 {
+    // Hash bcrypt fictício para manter tempo constante de verificação quando o e-mail não existe (evita timing attack)
+    private const HASH_FICTICIO = '$2y$10$lLCzEzINZ.LTzxL7lQ24J.l2WbvXD.WsS5yz2vWPvxVSbN75DsS7u';
+
     private ?int $id_usuario;
     private string $nome;
     private string $email;
@@ -109,7 +112,13 @@ class Usuario
         $dados = $comando->fetch();
 
         // 4) Existe algum usuário com esse e-mail e a senha bate?
-        if (!$dados || !password_verify($senha, $dados["senha_hash"])) {
+        // Sempre executa password_verify mesmo quando o e-mail não existe (mitigação contra timing attack)
+        $hashBanco = is_array($dados) && isset($dados["senha_hash"])
+            ? (string) $dados["senha_hash"]
+            : self::HASH_FICTICIO;
+        $senhaConfere = strlen($senha) <= 72 && password_verify($senha, $hashBanco);
+
+        if (!$dados || !$senhaConfere) {
             return [
                 "sucesso" => false,
                 "mensagem" => "E-mail ou senha incorretos.",
@@ -133,18 +142,19 @@ class Usuario
         // QUALQUER UPDATE na linha (mesmo só do ultimo_login) bateria
         // ela de novo. Sem esse truque, logar pareceria "atualização
         // de dados cadastrais" quando não é nada disso.
+        $idUsuario = (int) $dados["id_usuario"];
         $atualizar = $conexao->prepare(
             "UPDATE usuario SET ultimo_login = NOW(), atualizado_em = atualizado_em WHERE id_usuario = :id"
         );
-        $atualizar->bindParam(":id", $dados["id_usuario"]);
+        $atualizar->bindValue(":id", $idUsuario, PDO::PARAM_INT);
         $atualizar->execute();
 
         $usuario = new Usuario(
-            $dados["nome"],
-            $dados["email"],
-            $dados["tipo_usuario"],
+            (string) $dados["nome"],
+            (string) $dados["email"],
+            (string) $dados["tipo_usuario"],
             (bool) $dados["ativo"],
-            $dados["id_usuario"]
+            $idUsuario
         );
 
         return [

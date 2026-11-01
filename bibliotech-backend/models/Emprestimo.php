@@ -2,6 +2,7 @@
 
 // formatarDataBr() é usada na mensagem de aprovação (dd/mm/aaaa)
 require_once __DIR__ . "/../config/Datas.php";
+require_once __DIR__ . "/../src/Support/Logger.php";
 
 /**
  * Classe Emprestimo
@@ -58,10 +59,9 @@ class Emprestimo
         try {
             $this->conexao->beginTransaction();
 
-            // Precisa do tipo (aluno/professor) só pra montar o aviso
-            // pra bibliotecária mais abaixo
+            // Trava a linha do usuário para impedir solicitações concorrentes que ultrapassem o limite
             $stmt = $this->conexao->prepare(
-                "SELECT id_usuario, tipo_usuario FROM usuario WHERE id_usuario = :id"
+                "SELECT id_usuario, nome, tipo_usuario, ativo FROM usuario WHERE id_usuario = :id FOR UPDATE"
             );
             $stmt->execute([':id' => $idUsuario]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -69,6 +69,16 @@ class Emprestimo
             if (!$usuario) {
                 $this->conexao->rollBack();
                 return $this->resposta(false, 'Usuário não encontrado.');
+            }
+
+            if ((int) $usuario['ativo'] === 0) {
+                $this->conexao->rollBack();
+                return $this->resposta(false, 'Usuário está inativo e não pode realizar empréstimos.');
+            }
+
+            if (!in_array($usuario['tipo_usuario'], ['aluno', 'professor'], true)) {
+                $this->conexao->rollBack();
+                return $this->resposta(false, 'Somente alunos e professores podem realizar empréstimos.');
             }
 
             // Multa ainda não paga (inclusive de livro já devolvido)
@@ -149,10 +159,11 @@ class Emprestimo
                 "INSERT INTO emprestimo
                     (emp_ativo, reserva, dev_pdia, multa_pendente, data_emp, data_dev_prevista, data_dev, id_livro, id_usuario)
                  VALUES
-                    (0, 1, 0, 0, :data, :data, NULL, :id_livro, :id_usuario)"
+                    (0, 1, 0, 0, :data_emp, :data_prev, NULL, :id_livro, :id_usuario)"
             );
             $stmt->execute([
-                ':data'       => $hoje,
+                ':data_emp'   => $hoje,
+                ':data_prev'  => $hoje,
                 ':id_livro'   => $idLivro,
                 ':id_usuario' => $idUsuario,
             ]);
@@ -165,7 +176,7 @@ class Emprestimo
             $stmt->execute();
             $bibliotecarios = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-            $mensagemAviso = "{$usuario['tipo_usuario']} solicitou o livro \"{$livro['titulo']}\". Aguardando aprovação.";
+            $mensagemAviso = "{$usuario['tipo_usuario']} {$usuario['nome']} solicitou o livro \"{$livro['titulo']}\". Aguardando aprovação.";
             $inserirNotificacao = $this->conexao->prepare(
                 "INSERT INTO notificacao (id_usuario, tipo, titulo, mensagem)
                  VALUES (:id_usuario, 'solicitacao_emprestimo', 'Nova solicitação de empréstimo', :mensagem)"
@@ -328,7 +339,8 @@ class Emprestimo
                 "SELECT E.id_emprestimo, E.reserva, E.emp_ativo, E.id_usuario, E.id_livro, L.titulo
                  FROM emprestimo E
                  INNER JOIN livros L ON L.id_livro = E.id_livro
-                 WHERE E.id_emprestimo = :id"
+                 WHERE E.id_emprestimo = :id
+                 FOR UPDATE"
             );
             $stmt->execute([':id' => $idEmprestimo]);
             $solicitacao = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -424,7 +436,7 @@ class Emprestimo
             $this->conexao->beginTransaction();
 
             $stmt = $this->conexao->prepare(
-                "SELECT id_emprestimo, id_usuario, multa_pendente FROM emprestimo WHERE id_emprestimo = :id"
+                "SELECT id_emprestimo, id_usuario, emp_ativo, multa_pendente FROM emprestimo WHERE id_emprestimo = :id FOR UPDATE"
             );
             $stmt->execute([':id' => $idEmprestimo]);
             $emprestimo = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -439,8 +451,14 @@ class Emprestimo
                 return $this->resposta(false, 'Esse empréstimo não tem multa pendente.');
             }
 
+            if ((int) $emprestimo['emp_ativo'] === 1) {
+                $this->conexao->rollBack();
+                return $this->resposta(false, 'O livro ainda não foi devolvido. Registre a devolução antes de quitar a multa.');
+            }
+
+            // valor_multa e dev_pdia permanecem gravados como histórico do valor pago
             $stmt = $this->conexao->prepare(
-                "UPDATE emprestimo SET multa_pendente = 0, valor_multa = 0 WHERE id_emprestimo = :id"
+                "UPDATE emprestimo SET multa_pendente = 0 WHERE id_emprestimo = :id"
             );
             $stmt->execute([':id' => $idEmprestimo]);
 
@@ -456,8 +474,11 @@ class Emprestimo
 
             return $this->resposta(true, 'Multa quitada com sucesso.');
         } catch (Exception $e) {
-            $this->conexao->rollBack();
-            return $this->resposta(false, 'Erro ao quitar multa: ' . $e->getMessage());
+            if ($this->conexao->inTransaction()) {
+                $this->conexao->rollBack();
+            }
+            \Bibliotech\Support\Logger::error("Erro ao quitar multa do empréstimo {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao quitar multa. Tente novamente.');
         }
     }
 
@@ -469,12 +490,16 @@ class Emprestimo
      */
     public function renovarEmprestimo(int $idEmprestimo, int $idUsuarioSolicitante): array
     {
-        $stmt = $this->conexao->prepare("SELECT tipo_usuario FROM usuario WHERE id_usuario = :id");
+        $stmt = $this->conexao->prepare("SELECT tipo_usuario, ativo FROM usuario WHERE id_usuario = :id");
         $stmt->execute([':id' => $idUsuarioSolicitante]);
-        $tipo = $stmt->fetchColumn();
+        $solicitante = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (in_array($tipo, ['bibliotecario', 'admin'], true)) {
-            return $this->aprovarRenovacao($idEmprestimo);
+        if (!$solicitante || (int) $solicitante['ativo'] === 0) {
+            return $this->resposta(false, 'Usuário inativo ou não encontrado.');
+        }
+
+        if (in_array($solicitante['tipo_usuario'], ['bibliotecario', 'admin'], true)) {
+            return $this->aprovarRenovacao($idEmprestimo, false);
         }
 
         return $this->solicitarRenovacao($idEmprestimo, $idUsuarioSolicitante);
@@ -496,16 +521,17 @@ class Emprestimo
             $stmt = $this->conexao->prepare(
                 "SELECT E.id_emprestimo, E.id_usuario, E.id_livro, E.emp_ativo, E.reserva,
                         E.data_emp, E.data_dev_prevista, E.data_dev,
-                        U.nome AS nome_usuario, U.tipo_usuario, L.titulo
+                        U.nome AS nome_usuario, U.tipo_usuario, U.ativo, L.titulo
                  FROM emprestimo E
                  INNER JOIN usuario U ON U.id_usuario = E.id_usuario
                  INNER JOIN livros L ON L.id_livro = E.id_livro
-                 WHERE E.id_emprestimo = :id"
+                 WHERE E.id_emprestimo = :id
+                 FOR UPDATE"
             );
             $stmt->execute([':id' => $idEmprestimo]);
             $emprestimo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0) {
+            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0 || $emprestimo['data_dev'] !== null) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
@@ -519,6 +545,13 @@ class Emprestimo
                 return $this->resposta(false, 'Você só pode solicitar renovação dos seus próprios empréstimos.');
             }
 
+            if ((int) $emprestimo['ativo'] === 0) {
+                if ($transacaoPropria && $this->conexao->inTransaction()) {
+                    $this->conexao->rollBack();
+                }
+                return $this->resposta(false, 'Usuário está inativo e não pode renovar empréstimos.');
+            }
+
             if ((int) $emprestimo['reserva'] === 1) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
@@ -530,7 +563,11 @@ class Emprestimo
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
-                return $this->resposta(false, 'Não é possível renovar um empréstimo atrasado. Devolva o livro primeiro.');
+                $dataDevFormatada = formatarDataBr((string) $emprestimo['data_dev_prevista']);
+                return $this->resposta(
+                    false,
+                    "Não é possível solicitar renovação: o empréstimo venceu em {$dataDevFormatada} e está em atraso. Devolva o livro na biblioteca para regularização."
+                );
             }
 
             $prazoDias = ($emprestimo['tipo_usuario'] === 'professor')
@@ -543,7 +580,9 @@ class Emprestimo
             $stmt->execute([':prevista' => $emprestimo['data_dev_prevista'], ':emp' => $emprestimo['data_emp']]);
             $diasTotais = (int) $stmt->fetchColumn();
 
-            if ($diasTotais >= ($prazoDias * 2)) {
+            // Um empréstimo original tem no máximo $prazoDias (14 ou 15 para aluno; 14 ou 30 para professor).
+            // Se o prazo total atual já supera $prazoDias, ele já recebeu sua única renovação permitida (RN02).
+            if ($diasTotais > $prazoDias) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
@@ -599,18 +638,30 @@ class Emprestimo
             }
 
             return $this->resposta(true, 'Solicitação de renovação enviada. Aguardando aprovação da bibliotecária.', $idEmprestimo);
+        } catch (PDOException $e) {
+            if ($transacaoPropria && $this->conexao->inTransaction()) {
+                $this->conexao->rollBack();
+            }
+            if ($e->getCode() === "45000") {
+                return $this->resposta(false, $this->mensagemDoBanco($e));
+            }
+            \Bibliotech\Support\Logger::error("Erro ao solicitar renovação {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao solicitar renovação. Tente novamente.');
         } catch (Exception $e) {
             if ($transacaoPropria && $this->conexao->inTransaction()) {
                 $this->conexao->rollBack();
             }
-            return $this->resposta(false, 'Erro ao solicitar renovação: ' . $e->getMessage());
+            \Bibliotech\Support\Logger::error("Erro ao solicitar renovação {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao solicitar renovação. Tente novamente.');
         }
     }
 
     /**
      * Bibliotecária aprova a renovação de empréstimo.
+     * Por padrão exige que exista uma solicitação de renovação pendente (reserva = 1),
+     * exceto quando a própria bibliotecária aciona a renovação direta via renovarEmprestimo().
      */
-    public function aprovarRenovacao(int $idEmprestimo): array
+    public function aprovarRenovacao(int $idEmprestimo, bool $exigirSolicitacaoPendente = true): array
     {
         $transacaoPropria = false;
         try {
@@ -622,27 +673,46 @@ class Emprestimo
             $stmt = $this->conexao->prepare(
                 "SELECT E.id_emprestimo, E.id_usuario, E.id_livro, E.emp_ativo, E.reserva,
                         E.data_emp, E.data_dev_prevista, E.data_dev,
-                        U.tipo_usuario, L.titulo
+                        U.tipo_usuario, U.ativo, L.titulo
                  FROM emprestimo E
                  INNER JOIN usuario U ON U.id_usuario = E.id_usuario
                  INNER JOIN livros L ON L.id_livro = E.id_livro
-                 WHERE E.id_emprestimo = :id"
+                 WHERE E.id_emprestimo = :id
+                 FOR UPDATE"
             );
             $stmt->execute([':id' => $idEmprestimo]);
             $emprestimo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0) {
+            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0 || $emprestimo['data_dev'] !== null) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
                 return $this->resposta(false, 'Empréstimo não encontrado ou já devolvido.');
             }
 
+            if ($exigirSolicitacaoPendente && (int) $emprestimo['reserva'] !== 1) {
+                if ($transacaoPropria && $this->conexao->inTransaction()) {
+                    $this->conexao->rollBack();
+                }
+                return $this->resposta(false, 'Não há solicitação de renovação pendente para este empréstimo.');
+            }
+
+            if ((int) $emprestimo['ativo'] === 0) {
+                if ($transacaoPropria && $this->conexao->inTransaction()) {
+                    $this->conexao->rollBack();
+                }
+                return $this->resposta(false, 'O usuário deste empréstimo está inativo. Não é possível renovar.');
+            }
+
             if ($emprestimo['data_dev_prevista'] < date('Y-m-d')) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
-                return $this->resposta(false, 'Não é possível renovar um empréstimo atrasado. Devolva o livro primeiro.');
+                $dataDevFormatada = formatarDataBr((string) $emprestimo['data_dev_prevista']);
+                return $this->resposta(
+                    false,
+                    "Não é possível aprovar a renovação: o empréstimo venceu em {$dataDevFormatada} e está em atraso. O exemplar deve ser devolvido na biblioteca (ação indicada: clique em 'Recusar Renovação')."
+                );
             }
 
             $prazoDias = ($emprestimo['tipo_usuario'] === 'professor')
@@ -655,7 +725,7 @@ class Emprestimo
             $stmt->execute([':prevista' => $emprestimo['data_dev_prevista'], ':emp' => $emprestimo['data_emp']]);
             $diasTotais = (int) $stmt->fetchColumn();
 
-            if ($diasTotais >= ($prazoDias * 2)) {
+            if ($diasTotais > $prazoDias) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
@@ -680,11 +750,13 @@ class Emprestimo
                      data_dev_prevista = DATE_ADD(data_dev_prevista, INTERVAL :dias DAY)
                  WHERE id_emprestimo = :id"
             );
-            $stmt->execute([':dias' => $prazoDias, ':id' => $idEmprestimo]);
+            $stmt->bindValue(':dias', $prazoDias, PDO::PARAM_INT);
+            $stmt->bindValue(':id', $idEmprestimo, PDO::PARAM_INT);
+            $stmt->execute();
 
             $stmt = $this->conexao->prepare("SELECT data_dev_prevista FROM emprestimo WHERE id_emprestimo = :id");
             $stmt->execute([':id' => $idEmprestimo]);
-            $novaData = $stmt->fetchColumn();
+            $novaData = (string) $stmt->fetchColumn();
 
             $stmt = $this->conexao->prepare(
                 "INSERT INTO notificacao (id_usuario, tipo, titulo, mensagem)
@@ -693,7 +765,7 @@ class Emprestimo
             $stmt->execute([
                 ':id_usuario' => $emprestimo['id_usuario'],
                 ':mensagem' => "Sua solicitação de renovação do livro \"{$emprestimo['titulo']}\" foi aprovada pela bibliotecária. Nova data de devolução prevista: "
-                    . (new DateTime($novaData))->format('d/m/Y') . '.',
+                    . formatarDataBr($novaData) . '.',
             ]);
 
             if ($transacaoPropria && $this->conexao->inTransaction()) {
@@ -701,11 +773,21 @@ class Emprestimo
             }
 
             return $this->resposta(true, 'Renovação aprovada com sucesso.', $idEmprestimo);
+        } catch (PDOException $e) {
+            if ($transacaoPropria && $this->conexao->inTransaction()) {
+                $this->conexao->rollBack();
+            }
+            if ($e->getCode() === "45000") {
+                return $this->resposta(false, $this->mensagemDoBanco($e));
+            }
+            \Bibliotech\Support\Logger::error("Erro ao aprovar renovação {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao aprovar renovação. Tente novamente.');
         } catch (Exception $e) {
             if ($transacaoPropria && $this->conexao->inTransaction()) {
                 $this->conexao->rollBack();
             }
-            return $this->resposta(false, 'Erro ao aprovar renovação: ' . $e->getMessage());
+            \Bibliotech\Support\Logger::error("Erro ao aprovar renovação {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao aprovar renovação. Tente novamente.');
         }
     }
 
@@ -723,26 +805,34 @@ class Emprestimo
 
             $stmt = $this->conexao->prepare(
                 "SELECT E.id_emprestimo, E.id_usuario, E.id_livro, E.emp_ativo, E.reserva,
-                        E.data_dev_prevista, L.titulo
+                        E.data_dev_prevista, E.data_dev, L.titulo
                  FROM emprestimo E
                  INNER JOIN livros L ON L.id_livro = E.id_livro
-                 WHERE E.id_emprestimo = :id"
+                 WHERE E.id_emprestimo = :id
+                 FOR UPDATE"
             );
             $stmt->execute([':id' => $idEmprestimo]);
             $emprestimo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0) {
+            if (!$emprestimo || (int) $emprestimo['emp_ativo'] === 0 || $emprestimo['data_dev'] !== null) {
                 if ($transacaoPropria && $this->conexao->inTransaction()) {
                     $this->conexao->rollBack();
                 }
                 return $this->resposta(false, 'Empréstimo não encontrado ou já devolvido.');
             }
 
+            if ((int) $emprestimo['reserva'] !== 1) {
+                if ($transacaoPropria && $this->conexao->inTransaction()) {
+                    $this->conexao->rollBack();
+                }
+                return $this->resposta(false, 'Não há solicitação de renovação pendente para este empréstimo.');
+            }
+
             // Remove o status pendente de reserva
             $stmt = $this->conexao->prepare("UPDATE emprestimo SET reserva = 0 WHERE id_emprestimo = :id");
             $stmt->execute([':id' => $idEmprestimo]);
 
-            $dataPrevista = (new DateTime($emprestimo['data_dev_prevista']))->format('d/m/Y');
+            $dataPrevista = formatarDataBr((string) $emprestimo['data_dev_prevista']);
             $stmt = $this->conexao->prepare(
                 "INSERT INTO notificacao (id_usuario, tipo, titulo, mensagem)
                  VALUES (:id_usuario, 'renovacao_recusada', 'Renovação recusada', :mensagem)"
@@ -761,7 +851,8 @@ class Emprestimo
             if ($transacaoPropria && $this->conexao->inTransaction()) {
                 $this->conexao->rollBack();
             }
-            return $this->resposta(false, 'Erro ao recusar renovação: ' . $e->getMessage());
+            \Bibliotech\Support\Logger::error("Erro ao recusar renovação {$idEmprestimo}: " . $e->getMessage());
+            return $this->resposta(false, 'Erro ao recusar renovação. Tente novamente.');
         }
     }
 

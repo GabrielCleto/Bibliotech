@@ -20,16 +20,14 @@ antes de inventar um comportamento.
 
 ## 2. Autenticação
 
-- **Web (Páginas HTML):** Login feito em `paginas/login.php` (e-mail + senha com proteção CSRF). Sessão nativa PHP armazenada em cookie.
-- **API REST (`/api/...`):** Suporta duas modalidades flexíveis:
-  1. **Sessão via Cookie:** Se a chamada vier de um navegador na mesma origem, a sessão do PHP é detectada automaticamente.
-  2. **Cabeçalho de Autenticação (Mobile / SPA / Clientes Externos):** Aceita `Authorization: Bearer <id_ou_token>` ou `X-User-Id: <id>`, dispensando cookies e facilitando integrações desacopladas.
+- **Web (Páginas HTML):** Login feito em `paginas/login.php` (e-mail + senha com proteção CSRF e mitigação de timing attack). Sessão nativa PHP armazenada em cookie (`HttpOnly`).
+- **API REST (`/api/...`):** Utiliza **exclusivamente a sessão verificada do PHP** via cookie de navegador (mesma sessão criada no `paginas/login.php`). Cabeçalhos manipuláveis pelo cliente (`X-User-Id` ou `Authorization: Bearer <id>`) **não** são aceitos, impedindo falsificação de identidade (spoofing).
 - Tipos de usuário: `aluno`, `professor`, `bibliotecario`, `admin`.
-- Controle de acesso unificado: `CurrentUser::requireActiveAccount` garante que contas inativas sejam bloqueadas em tempo real tanto na Web quanto na API.
+- Controle de acesso unificado: `CurrentUser::requireActiveAccount` garante que contas inativas sejam bloqueadas em tempo real tanto na Web quanto na API, liberando a trava da sessão logo em seguida (`session_write_close()`) para permitir requisições concorrentes rápidas.
 
 ## 3. Proteção CSRF
 
-Toda ação das páginas HTML que modifica dados (aprovar, recusar, cadastrar, editar, remover, solicitar) exige um campo `csrf_token` no `POST`, validado com a sessão. A API REST utiliza autenticação por cabeçalho/sessão com JSON Payload e dispensa tokens CSRF.
+Toda ação das páginas HTML que modifica dados (aprovar, recusar, cadastrar, editar, remover, solicitar) exige um campo `csrf_token` no `POST`, validado com `hash_equals` na sessão.
 
 ## 4. Páginas HTML prontas (pasta `paginas/`)
 
@@ -88,10 +86,6 @@ Todas as respostas de sucesso vêm no formato:
 E erros:
 ```json
 { "error": { "code": "codigo_do_erro", "message": "Mensagem descritiva em português" } }
-```
-E erros assim:
-```json
-{ "error": { "code": "algo_snake_case", "message": "Mensagem em português" } }
 ```
 
 ## 6. Regras de negócio que o front-end precisa saber

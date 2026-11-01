@@ -34,7 +34,7 @@ session_write_close();
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["devolver"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["devolver"]) && is_scalar($_POST["devolver"])) {
     $resultado = $logica->registrarDevolucao((int) $_POST["devolver"]);
     $mensagem = $resultado["mensagem"];
 }

@@ -24,18 +24,22 @@ if (!isset($_SESSION["id_usuario"])) {
 $conexao = Conexao::getConexao();
 exigirContaAtiva($conexao);
 
-$idUsuario = $_SESSION["id_usuario"];
+$idUsuario = (int) $_SESSION["id_usuario"];
+$tipoUsuario = (string) ($_SESSION["tipo_usuario"] ?? "");
 $mensagem = "";
 
-$tokenValido = csrf_valido($_POST["csrf_token"] ?? null);
+$tokenValido = $_SERVER["REQUEST_METHOD"] !== "POST" || csrf_valido($_POST["csrf_token"] ?? null);
 $tokenCsrf = csrf_token();
 session_write_close();
+
+$acaoPost = is_string($_POST["acao"] ?? null) ? $_POST["acao"] : "";
+$idLivroPost = is_scalar($_POST["id_livro"] ?? null) ? (int) $_POST["id_livro"] : 0;
 
 // Remover um livro da lista (veio do formulário de remover)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao"] ?? "") === "remover") {
-    $idLivro = (int) ($_POST["id_livro"] ?? 0);
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && $acaoPost === "remover") {
+    $idLivro = $idLivroPost;
     $stmt = $conexao->prepare("DELETE FROM lista_desejos WHERE id_usuario = :usuario AND id_livro = :livro");
     $stmt->execute([":usuario" => $idUsuario, ":livro" => $idLivro]);
 
@@ -50,8 +54,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
 }
 
 // Adicionar um livro (veio do formulário de adicionar, lá embaixo)
-if ($_SERVER["REQUEST_METHOD"] === "POST" && $tokenValido && ($_POST["acao"] ?? "") === "adicionar") {
-    $idLivro = (int) ($_POST["id_livro"] ?? 0);
+if ($_SERVER["REQUEST_METHOD"] === "POST" && $tokenValido && $acaoPost === "adicionar") {
+    $idLivro = $idLivroPost;
 
     $stmt = $conexao->prepare("SELECT id_livro, titulo, quantidade_disponivel FROM livros WHERE id_livro = :id");
     $stmt->execute([":id" => $idLivro]);
@@ -66,37 +70,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $tokenValido && ($_POST["acao"] ?? 
         if ($stmt->fetch()) {
             $mensagem = "Esse livro já está na sua lista de desejos.";
         } else {
-            $stmt = $conexao->prepare("INSERT INTO lista_desejos (id_usuario, id_livro) VALUES (:usuario, :livro)");
-            $stmt->execute([":usuario" => $idUsuario, ":livro" => $idLivro]);
-            $mensagem = "Livro adicionado à lista de desejos.";
-
-            // Sem cópia disponível agora? Entra também na fila de espera
-            if ((int) $livro["quantidade_disponivel"] <= 0) {
-                $stmt = $conexao->prepare(
-                    "SELECT id_reserva FROM reserva_fila
-                     WHERE id_usuario = :usuario AND id_livro = :livro AND atendida = 0"
-                );
+            try {
+                $stmt = $conexao->prepare("INSERT INTO lista_desejos (id_usuario, id_livro) VALUES (:usuario, :livro)");
                 $stmt->execute([":usuario" => $idUsuario, ":livro" => $idLivro]);
+                $mensagem = "Livro adicionado à lista de desejos.";
 
-                if (!$stmt->fetch()) {
-                    // Próxima posição sequencial livre para o livro (respeitando a constraint única de id_livro + posicao_fila)
-                    $stmt = $conexao->prepare(
-                        "SELECT COALESCE(MAX(posicao_fila), 0) + 1 AS proxima
-                         FROM reserva_fila WHERE id_livro = :livro"
-                    );
-                    $stmt->execute([":livro" => $idLivro]);
-                    $proximaPosicao = (int) $stmt->fetchColumn();
-
-                    $stmt = $conexao->prepare(
-                        "INSERT INTO reserva_fila (id_usuario, id_livro, posicao_fila, atendida)
-                         VALUES (:usuario, :livro, :posicao, 0)"
-                    );
-                    $stmt->execute([
-                        ":usuario" => $idUsuario,
-                        ":livro"   => $idLivro,
-                        ":posicao" => $proximaPosicao,
-                    ]);
-                    $mensagem .= " Como não tem cópia disponível agora, você também entrou na fila de espera.";
+                // Sem cópia disponível agora e usuário é aluno/professor? Entra na fila via sp_criar_reserva (atômica com FOR UPDATE)
+                if ((int) $livro["quantidade_disponivel"] <= 0 && in_array($tipoUsuario, ["aluno", "professor"], true)) {
+                    try {
+                        $stmtReserva = $conexao->prepare("CALL sp_criar_reserva(:usuario, :livro)");
+                        $stmtReserva->execute([":usuario" => $idUsuario, ":livro" => $idLivro]);
+                        $stmtReserva->closeCursor();
+                        $mensagem .= " Como não tem cópia disponível agora, você também entrou na fila de espera.";
+                    } catch (PDOException $e) {
+                        if ($e->getCode() !== "45000") {
+                            error_log("Falha ao registrar reserva_fila via sp_criar_reserva: " . $e->getMessage());
+                        }
+                    }
+                }
+            } catch (PDOException $e) {
+                if ($e->getCode() === "23000") {
+                    $mensagem = "Esse livro já está na sua lista de desejos.";
+                } else {
+                    error_log($e->getMessage());
+                    $mensagem = "Erro ao adicionar livro à lista de desejos. Tente novamente.";
                 }
             }
         }

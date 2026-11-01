@@ -1,6 +1,6 @@
-/* ================= CSS ESPECÍFICO - GERENCIAR USUÁRIOS ================= */
+/* CSS específico de gerenciar usuários */
 
-/* Botão Voltar */
+/* Botão voltar */
 .btn-voltar {
     display: inline-flex;
     align-items: center;
@@ -22,7 +22,7 @@
     transform: translateX(-5px);
 }
 
-/* Alertas de Mensagens */
+/* Alertas de mensagens */
 .alert-message {
     margin-top: 15px;
     font-weight: 600;
@@ -43,7 +43,7 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Container do Formulário */
+/* Container do formulário */
 .form-card {
     padding: 30px;
     margin-bottom: 20px;
@@ -68,7 +68,7 @@
     gap: 12px;
 }
 
-/* Grid do Formulário */
+/* Grade do formulário */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -79,7 +79,7 @@
     grid-column: 1 / -1;
 }
 
-/* Inputs e Labels */
+/* Campos e rótulos */
 .input-wrapper {
     display: flex;
     flex-direction: column;
@@ -123,7 +123,7 @@
     color: #fff;
 }
 
-/* Fieldsets Dinâmicos */
+/* Blocos dinâmicos por tipo de usuário */
 .dynamic-fieldset {
     margin-top: 20px;
     padding-top: 20px;
@@ -136,7 +136,7 @@
     margin-bottom: 10px;
 }
 
-/* Ações do Formulário */
+/* Botões de ação do formulário */
 .form-actions {
     margin-top: 30px;
     display: flex;
@@ -180,7 +180,7 @@
     color: #ef4444;
 }
 
-/* Badges de Tipo de Usuário */
+/* Selos de tipo de usuário */
 .badge {
     font-size: 11px;
     padding: 4px 10px;
@@ -193,20 +193,79 @@
 .badge-professor { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; }
 .badge-bibliotecario { background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #a78bfa; }
 
-/* TABELAS ======================== */
+/* Seção de tabelas */
 .table-section {
     margin-top: 10px;
 }
 
+/* Cabeçalho da seção com título e barra de pesquisa ao lado */
+.section-header-search {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.section-header-search .section-title {
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 220px;
+}
+
+/* Barra de pesquisa das tabelas */
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 320px;
+    max-width: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: #00e5ff;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.18);
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px 10px 42px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-family: inherit;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Card e barra de rolagem da tabela */
 .table-card {
     padding: 0;
-    overflow: hidden; /* Mantém as bordas arredondadas intactas */
+    overflow: hidden;
 }
 
 .table-responsive {
     width: 100%;
     overflow-x: auto;
-    /* Estilização sútil para scrollbar horizontal na tabela */
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 229, 255, 0.3) rgba(15, 23, 42, 0.6);
 }
@@ -215,6 +274,7 @@
 .table-responsive::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
 .table-responsive::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 10px; }
 
+/* Estrutura da tabela de dados */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -248,7 +308,7 @@
 .td-name { font-weight: 600; color: #fff; }
 .td-empty { text-align: center; color: rgba(255, 255, 255, 0.4); font-style: italic; padding: 30px !important; }
 
-/* Status nas Tabelas */
+/* Indicadores de situação na tabela */
 .status-badge {
     font-size: 12px;
     font-weight: 600;
@@ -263,11 +323,20 @@
     font-style: italic;
 }
 
-/* Botões de Ação da Tabela */
+/* Botões de ação da tabela */
 .td-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    position: relative;
+    z-index: 50;
+}
+
+.td-actions a,
+.td-actions button {
+    position: relative;
+    z-index: 60;
+    cursor: pointer;
 }
 
 .inline-form {
@@ -298,21 +367,10 @@
 .btn-enable { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
 .btn-enable:hover { background: rgba(16, 185, 129, 0.3); transform: scale(1.1); }
 
-/* Responsivo */
+/* Responsividade */
 @media (max-width: 768px) {
     .form-grid { grid-template-columns: 1fr; }
     .form-actions { justify-content: space-between; }
-}
-
-/* Força a área de ações da tabela a ser clicável e estar no topo */
-.td-actions {
-    position: relative;
-    z-index: 50; 
-}
-
-.td-actions a,
-.td-actions button {
-    position: relative;
-    z-index: 60;
-    cursor: pointer;
+    .section-header-search { flex-direction: column; align-items: stretch; }
+    .search-input-wrapper { width: 100%; }
 }

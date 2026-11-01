@@ -15,7 +15,7 @@
  */
 function csrf_token(): string
 {
-    if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
         session_start();
     }
 
@@ -29,18 +29,20 @@ function csrf_token(): string
 
 /**
  * Confere se o token que veio do formulário bate com o da sessão.
+ * Aceita mixed para não estourar TypeError fatal caso enviem array no POST (ex.: csrf_token[]=1).
  */
-function csrf_valido(?string $tokenRecebido): bool
+function csrf_valido(mixed $tokenRecebido): bool
 {
-    if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
         session_start();
     }
 
-    if (empty($_SESSION["csrf_token"]) || !is_string($tokenRecebido)) {
+    $tokenSessao = $_SESSION["csrf_token"] ?? null;
+    if (!is_string($tokenSessao) || $tokenSessao === "" || !is_string($tokenRecebido) || $tokenRecebido === "") {
         return false;
     }
 
     // hash_equals compara sem dar "dica" de quanto acertou (mais seguro
     // que usar só ==)
-    return hash_equals($_SESSION["csrf_token"], $tokenRecebido);
+    return hash_equals($tokenSessao, $tokenRecebido);
 }

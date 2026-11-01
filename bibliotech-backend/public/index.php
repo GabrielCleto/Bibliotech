@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 
+use Bibliotech\Support\Logger;
+
 require_once __DIR__ . '/../src/Support/Autoloader.php';
 require_once __DIR__ . '/../config/database.php';
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-User-Id');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
@@ -20,6 +22,8 @@ try {
     if (isset($_SESSION['id_usuario'])) {
         CurrentUser::requireActiveAccount(database(), (int) $_SESSION['id_usuario']);
     }
+    // Libera a trava do arquivo de sessão para não bloquear chamadas simultâneas da API
+    session_write_close();
     $router = new Router();
     $wishlist = new WishlistController(database());
     $notifications = new NotificationController(database());

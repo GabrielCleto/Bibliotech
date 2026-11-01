@@ -20,10 +20,11 @@ function formatarDataBr(?string $data, string $vazio = "—"): string
     }
 
     // DateTime::createFromFormat devolve false se o texto não bater
-    // com o formato esperado — nesse caso devolve o texto original
-    // sem quebrar a página (mais seguro do que esconder o dado)
-    $objeto = DateTime::createFromFormat("Y-m-d", substr($data, 0, 10));
-    if ($objeto === false) {
+    // com o formato esperado; também conferimos format("Y-m-d") === $trecho
+    // para evitar que datas inexistentes (ex.: 2026-02-31) transbordem para março.
+    $trecho = substr($data, 0, 10);
+    $objeto = DateTime::createFromFormat("!Y-m-d", $trecho);
+    if ($objeto === false || $objeto->format("Y-m-d") !== $trecho) {
         return $data;
     }
 
@@ -40,8 +41,9 @@ function formatarDataHoraBr(?string $dataHora, string $vazio = "—"): string
         return $vazio;
     }
 
-    $objeto = DateTime::createFromFormat("Y-m-d H:i:s", $dataHora);
-    if ($objeto === false) {
+    $trecho = substr($dataHora, 0, 19);
+    $objeto = DateTime::createFromFormat("Y-m-d H:i:s", $trecho);
+    if ($objeto === false || $objeto->format("Y-m-d H:i:s") !== $trecho) {
         return $dataHora;
     }
 

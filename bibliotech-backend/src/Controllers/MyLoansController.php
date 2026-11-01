@@ -74,7 +74,8 @@ final class MyLoansController
         }
 
         $body = Request::json();
-        $bookId = (int) ($params['bookId'] ?? $body['id_livro'] ?? Request::integer('id_livro') ?? 0);
+        $rawBookId = $params['bookId'] ?? $body['id_livro'] ?? Request::integer('id_livro') ?? 0;
+        $bookId = is_scalar($rawBookId) ? (int) $rawBookId : 0;
 
         if ($bookId <= 0) {
             JsonResponse::error('ID do livro não informado ou inválido.', 400, 'invalid_book_id');

@@ -20,7 +20,25 @@ final class Request
 
     public static function integer(string $key, ?int $default = null): ?int
     {
-        $value = $_GET[$key] ?? $default;
-        return filter_var($value, FILTER_VALIDATE_INT, ['options' => ['default' => $default]]);
+        if (!isset($_GET[$key]) || !is_scalar($_GET[$key])) {
+            return $default;
+        }
+        $validated = filter_var($_GET[$key], FILTER_VALIDATE_INT);
+        return $validated !== false ? $validated : $default;
+    }
+
+    public static function queryString(string $key, string $default = ''): string
+    {
+        $value = $_GET[$key] ?? null;
+        return is_string($value) ? trim($value) : $default;
+    }
+
+    public static function validDate(string $value): bool
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
+            return false;
+        }
+        $dt = DateTime::createFromFormat('!Y-m-d', $value);
+        return $dt !== false && $dt->format('Y-m-d') === $value;
     }
 }

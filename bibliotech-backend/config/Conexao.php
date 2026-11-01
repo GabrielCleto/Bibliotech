@@ -53,7 +53,22 @@ class Conexao
                 ]);
             } catch (PDOException $e) {
                 \Bibliotech\Support\Logger::error("Falha de conexão com o banco de dados: " . $e->getMessage());
-                die("Erro ao conectar ao banco de dados: " . $e->getMessage());
+
+                $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+                $isApi = str_contains($uri, '/api/') || str_ends_with($uri, '/api');
+
+                if (PHP_SAPI === 'cli' || $isApi) {
+                    throw new RuntimeException('Falha ao conectar ao banco de dados.', 0, $e);
+                }
+
+                if (!headers_sent()) {
+                    http_response_code(503);
+                    header('Content-Type: text/plain; charset=utf-8');
+                }
+
+                $debug = (bool) \Bibliotech\Support\Env::get('APP_DEBUG', false);
+                $detalhe = $debug ? ' Detalhe técnico: ' . $e->getMessage() : '';
+                exit('Serviço temporariamente indisponível: não foi possível conectar ao banco de dados.' . $detalhe);
             }
         }
 

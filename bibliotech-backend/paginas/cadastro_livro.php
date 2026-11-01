@@ -28,9 +28,8 @@ if ($tipo !== "bibliotecario" && $tipo !== "admin") {
 
 $mensagem = "";
 
-// Ano mínimo aceito (referência: invenção da imprensa) e máximo
-// (o ano atual, calculado sozinho — nunca fica desatualizado)
-$anoMinimo = 1450;
+// Ano mínimo aceito pela coluna YEAR do MySQL 8 (1901..2155) e máximo (ano atual)
+$anoMinimo = 1901;
 $anoMaximo = (int) date("Y");
 
 // Esse array guarda o que a pessoa digitou, pra reaparecer no
@@ -55,37 +54,47 @@ session_write_close();
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
 } elseif ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Guarda tudo que veio do formulário, pra usar tanto na
-    // validação quanto pra reexibir se der erro
-    $dados["titulo"] = trim($_POST["titulo"] ?? "");
-    $dados["id_autor"] = $_POST["id_autor"] ?? "";
-    $dados["novo_autor"] = trim($_POST["novo_autor"] ?? "");
-    $dados["isbn"] = trim($_POST["isbn"] ?? "");
-    $dados["editora"] = trim($_POST["editora"] ?? "");
-    $dados["publicacao"] = trim($_POST["publicacao"] ?? "");
-    $dados["id_cat"] = $_POST["id_cat"] ?? "";
-    $dados["novo_genero"] = trim($_POST["novo_genero"] ?? "");
-    $dados["quantidade"] = $_POST["quantidade"] ?? "";
+    // Guarda tudo que veio do formulário de forma segura contra arrays no POST
+    $lerCampo = static fn(string $chave): string => is_string($_POST[$chave] ?? null) ? trim($_POST[$chave]) : "";
+
+    $dados["titulo"] = $lerCampo("titulo");
+    $dados["id_autor"] = $lerCampo("id_autor");
+    $dados["novo_autor"] = $lerCampo("novo_autor");
+    $dados["isbn"] = $lerCampo("isbn");
+    $dados["editora"] = $lerCampo("editora");
+    $dados["publicacao"] = $lerCampo("publicacao");
+    $dados["id_cat"] = $lerCampo("id_cat");
+    $dados["novo_genero"] = $lerCampo("novo_genero");
+    $dados["quantidade"] = $lerCampo("quantidade");
 
     $titulo = $dados["titulo"];
     $isbn = $dados["isbn"];
     $editora = $dados["editora"];
     $publicacao = $dados["publicacao"];
-    $quantidade = (int) $dados["quantidade"];
+    $quantidade = ctype_digit($dados["quantidade"]) ? (int) $dados["quantidade"] : 0;
 
-    // Checa se o ano é um número e está dentro do intervalo aceito
+    // Checa se o ano é um número e está dentro do intervalo aceito pela coluna YEAR do MySQL
     $anoValido = ctype_digit($publicacao)
         && (int) $publicacao >= $anoMinimo
         && (int) $publicacao <= $anoMaximo;
 
+    $autorSelecionadoValido = $dados["id_autor"] === "novo" || (ctype_digit($dados["id_autor"]) && (int) $dados["id_autor"] > 0);
+    $categoriaSelecionadaValida = $dados["id_cat"] === "novo" || (ctype_digit($dados["id_cat"]) && (int) $dados["id_cat"] > 0);
+
     if ($titulo === "" || $isbn === "" || $editora === "" || $quantidade < 1) {
         $mensagem = "Título, ISBN, editora e quantidade (mínimo 1) são obrigatórios.";
+    } elseif (mb_strlen($titulo) > 150 || mb_strlen($isbn) > 17 || mb_strlen($editora) > 100) {
+        $mensagem = "Tamanho máximo excedido (Título: 150, ISBN: 17, Editora: 100 caracteres).";
     } elseif (!$anoValido) {
         $mensagem = "Ano de publicação inválido. Use um valor entre {$anoMinimo} e {$anoMaximo}.";
-    } elseif ($dados["id_autor"] === "novo" && trim($dados["novo_autor"]) === "") {
-        $mensagem = "O nome do novo autor é obrigatório.";
-    } elseif ($dados["id_cat"] === "novo" && trim($dados["novo_genero"]) === "") {
-        $mensagem = "O nome do novo gênero/categoria é obrigatório.";
+    } elseif (!$autorSelecionadoValido) {
+        $mensagem = "Selecione um autor válido ou cadastre um novo autor.";
+    } elseif ($dados["id_autor"] === "novo" && ($dados["novo_autor"] === "" || mb_strlen($dados["novo_autor"]) > 70)) {
+        $mensagem = "O nome do novo autor é obrigatório e deve ter até 70 caracteres.";
+    } elseif (!$categoriaSelecionadaValida) {
+        $mensagem = "Selecione um gênero/categoria válido ou cadastre um novo.";
+    } elseif ($dados["id_cat"] === "novo" && ($dados["novo_genero"] === "" || mb_strlen($dados["novo_genero"]) > 30)) {
+        $mensagem = "O nome do novo gênero/categoria é obrigatório e deve ter até 30 caracteres.";
     } else {
         try {
             $conexao->beginTransaction();
@@ -135,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
             $sql = "INSERT INTO livros
                         (titulo, id_autor, ISBN, publicacao, editora, id_cat, quantidade_total, quantidade_disponivel)
                     VALUES
-                        (:titulo, :id_autor, :isbn, :publicacao, :editora, :id_cat, :quantidade, :quantidade)";
+                        (:titulo, :id_autor, :isbn, :publicacao, :editora, :id_cat, :qtd_total, :qtd_disp)";
             $stmt = $conexao->prepare($sql);
             $stmt->execute([
                 ":titulo" => $titulo,
@@ -144,7 +153,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
                 ":publicacao" => $publicacao,
                 ":editora" => $editora,
                 ":id_cat" => $idCategoria,
-                ":quantidade" => $quantidade,
+                ":qtd_total" => $quantidade,
+                ":qtd_disp" => $quantidade,
             ]);
             $idNovoLivro = (int) $conexao->lastInsertId();
 

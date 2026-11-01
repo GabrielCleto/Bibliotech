@@ -22,6 +22,18 @@ function exigirContaAtiva(PDO $conexao): void
     // false = a conta nem existe mais; 0 = conta inativada
     if ($ativo === false || (int) $ativo === 0) {
         $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                "",
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
         session_destroy();
         header("Location: login.php");
         exit;

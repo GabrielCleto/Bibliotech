@@ -1,14 +1,15 @@
 <?php
 // cadastro.php — tela de "criar conta". A pessoa escolhe o tipo
 // (aluno/professor/bibliotecário) e preenche os dados daquele tipo.
-// Usa as tabelas que já existem (usuario + aluno/professor/
-// bibliotecario) — não criamos nenhuma tabela ou coluna nova.
+// Usa a tabela unificada "usuario" do banco de dados atualizado.
 
 session_start();
 require __DIR__ . "/../config/Conexao.php";
 require __DIR__ . "/../config/Csrf.php";
 require __DIR__ . "/../config/SemCache.php";
 require __DIR__ . "/../config/Criptografia.php";
+require __DIR__ . "/../config/MensagemBanco.php";
+require __DIR__ . "/../config/Validacao.php";
 sem_cache();
 
 $conexao = Conexao::getConexao();
@@ -30,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
 } elseif ($_SERVER["REQUEST_METHOD"] === "POST") {
     foreach ($dados as $campo => $valorPadrao) {
-        $dados[$campo] = trim($_POST[$campo] ?? "");
+        $dados[$campo] = campoTexto($_POST, $campo);
     }
     if ($dados["tipo"] === "") {
         $dados["tipo"] = "aluno";
@@ -38,21 +39,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
 
     $nome = $dados["nome"];
     $email = strtolower($dados["email"]);
-    $senha = $_POST["senha"] ?? "";
-    $confirmarSenha = $_POST["confirmar_senha"] ?? "";
+    $senha = is_string($_POST["senha"] ?? null) ? $_POST["senha"] : "";
+    $confirmarSenha = is_string($_POST["confirmar_senha"] ?? null) ? $_POST["confirmar_senha"] : "";
     $tipo = $dados["tipo"];
 
+    $raLimpo = null;
+    $idTurmaLimpo = null;
+    $disciplinaLimpa = null;
+    $matriculaLimpa = null;
+    $cpfLimpo = null;
+    $nascLimpo = null;
+    $enderecoLimpo = null;
+    $telefoneLimpo = null;
+
     // 1) Campos gerais (de usuario)
-    if ($nome === "") {
-        $mensagem = "O campo Nome é obrigatório.";
+    if ($nome === "" || mb_strlen($nome) > 100) {
+        $mensagem = "O campo Nome é obrigatório (máximo 100 caracteres).";
     } elseif ($email === "") {
         $mensagem = "O campo E-mail é obrigatório.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 150) {
         $mensagem = "Formato de e-mail inválido.";
     } elseif ($senha === "" || $confirmarSenha === "") {
         $mensagem = "Preencha a senha e a confirmação de senha.";
-    } elseif (strlen($senha) < 6) {
-        $mensagem = "A senha precisa ter pelo menos 6 caracteres.";
+    } elseif (strlen($senha) < 6 || strlen($senha) > 72) {
+        $mensagem = "A senha precisa ter entre 6 e 72 caracteres.";
     } elseif ($senha !== $confirmarSenha) {
         $mensagem = "As senhas digitadas não são iguais.";
     } elseif ($tipo === "bibliotecario") {
@@ -60,43 +70,49 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     } elseif (!in_array($tipo, ["aluno", "professor"], true)) {
         $mensagem = "Tipo de usuário inválido.";
     } else {
-        // 2) Campos específicos de cada tipo
+        // 2) Campos específicos de cada tipo (respeitando chk_dados_por_tipo e trg_usuario_turma_insert)
         if ($tipo === "aluno") {
-            if ($dados["ra"] === "" || !ctype_digit($dados["ra"])) {
-                $mensagem = "Informe um RA válido (só números).";
-            } elseif ($dados["cpf_aluno"] === "") {
-                $mensagem = "O campo CPF é obrigatório.";
-            } elseif ($dados["data_nascimento"] === "") {
-                $mensagem = "O campo Data de nascimento é obrigatório.";
-            } elseif ($dados["endereco"] === "") {
-                $mensagem = "O campo Endereço é obrigatório.";
-            } elseif ($dados["telefone_aluno"] === "") {
-                $mensagem = "O campo Telefone é obrigatório.";
-            } elseif ($dados["matricula_aluno"] === "" || !ctype_digit($dados["matricula_aluno"])) {
-                $mensagem = "Informe uma matrícula válida (só números).";
+            $raLimpo = inteiroPositivo($dados["ra"], "2147483647");
+            $cpfLimpo = validarCpf($dados["cpf_aluno"]);
+            $nascLimpo = validarDataNascimento($dados["data_nascimento"]);
+            $telefoneLimpo = validarTelefone($dados["telefone_aluno"]);
+
+            if ($raLimpo === null) {
+                $mensagem = "Informe um RA válido (só números, maior que zero).";
+            } elseif ($dados["id_turma"] === "" || inteiroPositivo($dados["id_turma"], "2147483647") === null || !turmaExiste($conexao, $dados["id_turma"])) {
+                $mensagem = "O aluno precisa estar em uma turma válida.";
+            } elseif ($cpfLimpo === null) {
+                $mensagem = "CPF inválido: precisa ter 11 números.";
+            } elseif ($nascLimpo === null) {
+                $mensagem = "Data de nascimento inválida (use uma data que já passou).";
+            } elseif ($dados["endereco"] === "" || strlen($dados["endereco"]) > 200) {
+                $mensagem = "O campo Endereço é obrigatório (máximo 200 caracteres).";
+            } elseif ($telefoneLimpo === null) {
+                $mensagem = "Telefone inválido: use de 8 a 11 números (com ou sem DDD).";
+            } else {
+                $idTurmaLimpo = (int) $dados["id_turma"];
+                $enderecoLimpo = $dados["endereco"];
             }
         } elseif ($tipo === "professor") {
-            if ($dados["telefone_prof"] === "") {
-                $mensagem = "O campo Telefone é obrigatório.";
-            } elseif ($dados["disciplina"] === "") {
-                $mensagem = "O campo Disciplina é obrigatório.";
-            } elseif ($dados["matricula_prof"] === "" || !ctype_digit($dados["matricula_prof"])) {
-                $mensagem = "Informe uma matrícula válida (só números).";
-            }
-        } else { // bibliotecario
-            if ($dados["cpf_biblio"] === "") {
-                $mensagem = "O campo CPF é obrigatório.";
-            } elseif ($dados["telefone_biblio"] === "") {
-                $mensagem = "O campo Telefone é obrigatório.";
+            $telefoneLimpo = validarTelefone($dados["telefone_prof"]);
+            $matriculaLimpa = inteiroPositivo($dados["matricula_prof"], "9223372036854775807");
+
+            if ($telefoneLimpo === null) {
+                $mensagem = "Telefone inválido: use de 8 a 11 números (com ou sem DDD).";
+            } elseif ($dados["disciplina"] === "" || mb_strlen($dados["disciplina"]) > 50) {
+                $mensagem = "O campo Disciplina é obrigatório (máximo 50 caracteres).";
+            } elseif ($matriculaLimpa === null) {
+                $mensagem = "Informe uma matrícula válida (só números, maior que zero).";
+            } else {
+                $disciplinaLimpa = $dados["disciplina"];
             }
         }
     }
 
-    // 3) Se passou por tudo, tenta gravar
+    // 3) Se passou por tudo, tenta gravar na tabela unificada usuario
     if ($mensagem === "") {
         try {
-            // Confere duplicidade de e-mail antes (mensagem mais
-            // amigável do que deixar o banco recusar sozinho)
+            // Confere duplicidade de e-mail antes (mensagem mais amigável)
             $stmt = $conexao->prepare("SELECT id_usuario FROM usuario WHERE email = :email");
             $stmt->execute([":email" => $email]);
             if ($stmt->fetch()) {
@@ -107,54 +123,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
                 $conexao->beginTransaction();
 
                 $stmt = $conexao->prepare(
-                    "INSERT INTO usuario (nome, email, senha_hash, tipo_usuario)
-                     VALUES (:nome, :email, :senha_hash, :tipo)"
+                    "INSERT INTO usuario (
+                        nome, email, senha_hash, tipo_usuario,
+                        RA, id_turma, disciplina, matricula,
+                        CPF, dataNascimento, endereco, telefone
+                    ) VALUES (
+                        :nome, :email, :senha_hash, :tipo,
+                        :ra, :id_turma, :disciplina, :matricula,
+                        :cpf, :nascimento, :endereco, :telefone
+                    )"
                 );
                 $stmt->execute([
-                    ":nome" => $nome,
-                    ":email" => $email,
+                    ":nome"       => $nome,
+                    ":email"      => $email,
                     ":senha_hash" => password_hash($senha, PASSWORD_DEFAULT),
-                    ":tipo" => $tipo,
+                    ":tipo"       => $tipo,
+                    ":ra"         => $raLimpo,
+                    ":id_turma"   => $idTurmaLimpo,
+                    ":disciplina" => $disciplinaLimpa,
+                    ":matricula"  => $matriculaLimpa,
+                    ":cpf"        => $cpfLimpo !== null ? Criptografia::criptografar($cpfLimpo) : null,
+                    ":nascimento" => $nascLimpo !== null ? Criptografia::criptografar($nascLimpo) : null,
+                    ":endereco"   => $enderecoLimpo !== null ? Criptografia::criptografar($enderecoLimpo) : null,
+                    ":telefone"   => $telefoneLimpo !== null ? Criptografia::criptografar($telefoneLimpo) : null,
                 ]);
                 $idUsuario = (int) $conexao->lastInsertId();
-
-                if ($tipo === "aluno") {
-                    $stmt = $conexao->prepare(
-                        "INSERT INTO aluno (RA, id_usuario, id_turma, CPF_aluno, dataNascimento, endereco, telefone_aluno, matricula)
-                         VALUES (:ra, :id_usuario, :id_turma, :cpf, :nascimento, :endereco, :telefone, :matricula)"
-                    );
-                    $stmt->execute([
-                        ":ra" => $dados["ra"],
-                        ":id_usuario" => $idUsuario,
-                        ":id_turma" => $dados["id_turma"] !== "" ? $dados["id_turma"] : null,
-                        ":cpf" => Criptografia::criptografar($dados["cpf_aluno"]),
-                        ":nascimento" => Criptografia::criptografar($dados["data_nascimento"]),
-                        ":endereco" => Criptografia::criptografar($dados["endereco"]),
-                        ":telefone" => Criptografia::criptografar($dados["telefone_aluno"]),
-                        ":matricula" => $dados["matricula_aluno"],
-                    ]);
-                } elseif ($tipo === "professor") {
-                    $stmt = $conexao->prepare(
-                        "INSERT INTO professor (id_usuario, telefone_prof, disciplina, matricula)
-                         VALUES (:id_usuario, :telefone, :disciplina, :matricula)"
-                    );
-                    $stmt->execute([
-                        ":id_usuario" => $idUsuario,
-                        ":telefone" => Criptografia::criptografar($dados["telefone_prof"]),
-                        ":disciplina" => $dados["disciplina"],
-                        ":matricula" => $dados["matricula_prof"],
-                    ]);
-                } else { // bibliotecario
-                    $stmt = $conexao->prepare(
-                        "INSERT INTO bibliotecario (id_usuario, CPF_biblio, telefone_biblio)
-                         VALUES (:id_usuario, :cpf, :telefone)"
-                    );
-                    $stmt->execute([
-                        ":id_usuario" => $idUsuario,
-                        ":cpf" => Criptografia::criptografar($dados["cpf_biblio"]),
-                        ":telefone" => Criptografia::criptografar($dados["telefone_biblio"]),
-                    ]);
-                }
 
                 $conexao->commit();
 
@@ -173,7 +166,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
             }
             error_log($e->getMessage());
             if ($e->getCode() === "23000") {
-                $mensagem = "RA, CPF ou matrícula já cadastrado(a) para outra pessoa.";
+                $mensagem = mensagemIntegridade($e);
+            } elseif ($e->getCode() === "45000") {
+                $mensagem = mensagemDoBanco($e);
             } else {
                 $mensagem = "Erro ao criar a conta. Tente novamente.";
             }

@@ -7,14 +7,14 @@ final class NotificationController
 
     public function index(): never
     {
+        $unread = Request::queryString('unread', '1') === '0' ? 0 : 1;
         $sql = 'SELECT id_notificacao, tipo, titulo, mensagem, lida, criada_em, lida_em
                 FROM notificacao WHERE id_usuario = :user AND (:unread = 0 OR lida = 0)
                 ORDER BY criada_em DESC LIMIT 100';
         $statement = $this->db->prepare($sql);
-        $statement->execute([
-            'user' => CurrentUser::id(),
-            'unread' => ($_GET['unread'] ?? '1') === '0' ? 0 : 1,
-        ]);
+        $statement->bindValue('user', CurrentUser::id(), PDO::PARAM_INT);
+        $statement->bindValue('unread', $unread, PDO::PARAM_INT);
+        $statement->execute();
         JsonResponse::success($statement->fetchAll());
     }
 

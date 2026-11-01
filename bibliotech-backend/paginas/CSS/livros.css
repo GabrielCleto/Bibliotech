@@ -1,4 +1,4 @@
-/* ================= RESET E CONFIGURAÇÕES GERAIS ================= */
+/* Reset e configurações gerais */
 * {
     margin: 0;
     padding: 0;
@@ -11,15 +11,14 @@ html, body {
 }
 
 body {
-    background-color: #241b45; /* FUNDO ORIGINAL MANTIDO */
+    background-color: #241b45;
     color: #ffffff;
     font-family: Arial, Helvetica, sans-serif;
     overflow-x: hidden;
-    /* Espaço essencial no rodapé para a Hotbar não tampar os botões dos livros */
     padding-bottom: 90px !important; 
 }
 
-/* ================= BACKGROUND RENDER ================= */
+/* Imagem de fundo */
 .RENDER.BACKGROUND {
     position: fixed;
     inset: 0;
@@ -49,7 +48,7 @@ body {
     object-fit: cover;
 }
 
-/* ================= LAYOUT PRINCIPAL ================= */
+/* Layout principal */
 .app-layout {
     position: relative;
     z-index: 2;
@@ -59,7 +58,7 @@ body {
     padding: 25px 20px;
 }
 
-/* ================= CABEÇALHO (HERO BANNER) ================= */
+/* Cabeçalho do acervo */
 .hero-banner {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -101,7 +100,7 @@ body {
     font-size: 14px;
 }
 
-/* ================= BARRA DE AÇÕES (VOLTAR E CADASTRAR) ================= */
+/* Barra de ações (Voltar e Cadastrar) */
 .acervo-top-actions {
     display: flex;
     justify-content: space-between;
@@ -144,15 +143,61 @@ body {
     box-shadow: 0 4px 15px rgba(0, 167, 181, 0.3);
 }
 
-/* ================= GRID DOS LIVROS ================= */
+/* Barra de pesquisa */
+.acervo-search-container {
+    margin-bottom: 25px;
+    width: 100%;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: rgba(0, 229, 255, 0.5);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Grade dos livros */
 .livros-grid {
     display: grid;
-    /* Grid fluido que não quebra no celular */
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 20px;
 }
 
-/* ================= CARD DO LIVRO ================= */
+/* Card do livro */
 .livro-card {
     background: rgba(10, 15, 30, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -170,7 +215,7 @@ body {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
-/* Capa do Livro e Fallback */
+/* Capa do livro e fallback */
 .livro-capa {
     position: relative;
     width: 100%;
@@ -190,7 +235,6 @@ body {
     transform: scale(1.03);
 }
 
-/* Fallback perfeito para livros sem capa */
 .livro-capa-fallback {
     position: absolute;
     inset: 0;
@@ -205,12 +249,12 @@ body {
     background: linear-gradient(135deg, rgba(0, 167, 181, 0.2), rgba(20, 55, 170, 0.2));
 }
 
-/* Conteúdo interno do Card */
+/* Conteúdo interno do card */
 .livro-conteudo {
     padding: 15px;
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Faz o conteúdo ocupar o espaço restante */
+    flex-grow: 1;
 }
 
 .livro-titulo {
@@ -261,9 +305,9 @@ body {
 .status-indisponivel { color: #f87171; }
 .quantidade-livro { color: #94a3b8; font-size: 11px; font-weight: normal; }
 
-/* Botões do Card */
+/* Botões do card */
 .livro-acoes {
-    margin-top: auto; /* Garante que os botões fiquem alinhados no fundo do card */
+    margin-top: auto;
 }
 
 .livro-acoes form {
@@ -312,7 +356,7 @@ body {
     cursor: not-allowed;
 }
 
-/* ================= HOTBAR GLOBAL (MENU FLUTUANTE) ================= */
+/* Hotbar global (menu flutuante) */
 .global-hotbar {
     position: fixed;
     bottom: 25px;
@@ -320,7 +364,6 @@ body {
     transform: translateX(-50%);
     z-index: 9999;
     
-    /* Efeito Glassmorphism (Vidro) */
     background: rgba(15, 23, 42, 0.75);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -332,14 +375,13 @@ body {
     gap: 8px;
     padding: 10px 20px;
     
-    /* Sombra elegante */
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 
                 0 0 0 1px rgba(0, 229, 255, 0.1) inset;
     
     animation: hotbarSlideUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Itens da Hotbar */
+/* Itens da hotbar */
 .hotbar-item {
     display: flex;
     flex-direction: column;
@@ -353,14 +395,13 @@ body {
     min-width: 70px;
 }
 
-/* Hover (Passar o mouse) */
 .hotbar-item:hover {
     color: #00e5ff;
     background: rgba(0, 229, 255, 0.1);
     transform: translateY(-5px);
 }
 
-/* Ícones e Textos */
+/* Ícones e textos da hotbar */
 .hotbar-icon {
     font-size: 22px;
     margin-bottom: 4px;
@@ -377,13 +418,12 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Container de Ícone para colocar a bolinha de notificação */
 .hotbar-icon-wrapper {
     position: relative;
     display: flex;
 }
 
-/* Bolinha vermelha de notificações */
+/* Bolinha de notificações */
 .hotbar-badge {
     position: absolute;
     top: -5px;
@@ -399,18 +439,16 @@ body {
     animation: pulseBadge 2s infinite;
 }
 
-/* Botão de sair com cor avermelhada no hover */
 .hotbar-logout:hover {
     color: #ff4d4d;
     background: rgba(255, 77, 77, 0.1);
 }
 
-/* Ajuste importante: espaço no final da página para a hotbar não cobrir conteúdo */
 body {
     padding-bottom: 100px !important;
 }
 
-/* Animações */
+/* Animações da hotbar */
 @keyframes hotbarSlideUp {
     from {
         opacity: 0;
@@ -428,7 +466,7 @@ body {
     100% { transform: scale(1); }
 }
 
-/* ================= RESPONSIVIDADE HOTBAR ================= */
+/* Responsividade da hotbar */
 @media (max-width: 600px) {
     .global-hotbar {
         width: 90%;
@@ -442,12 +480,13 @@ body {
         flex: 1;
         padding: 6px 4px;
     }
+}
 
-/* ================= RESPONSIVIDADE (CELULARES) ================= */
+/* Responsividade para celulares */
 @media (max-width: 768px) {
     .acervo-top-actions {
         flex-direction: column;
-        align-items: stretch; /* Faz os botões ocuparem 100% da largura no celular */
+        align-items: stretch;
     }
     
     .btn-action {
@@ -455,7 +494,7 @@ body {
     }
 
     .livros-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Cards menores no celular */
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 15px;
     }
 

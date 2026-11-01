@@ -54,6 +54,45 @@ function validarCpf(string $texto): ?string
 }
 
 /**
+ * Confere se o CPF já pertence a outro usuário no banco, testando tanto a
+ * versão criptografada só com dígitos (12345678901) quanto a versão com
+ * máscara (123.456.789-01, usada nos 30 registros iniciais do Banco_de_dados_v1.1.sql).
+ */
+function cpfJaCadastrado(PDO $conexao, string $cpfDigitos, ?int $ignorarIdUsuario = null): bool
+{
+    if (!class_exists("Criptografia", false)) {
+        require_once __DIR__ . "/Criptografia.php";
+    }
+
+    $limpo = soDigitos($cpfDigitos);
+    if (strlen($limpo) !== 11) {
+        return false;
+    }
+
+    $comMascara = substr($limpo, 0, 3) . "."
+        . substr($limpo, 3, 3) . "."
+        . substr($limpo, 6, 3) . "-"
+        . substr($limpo, 9, 2);
+
+    $cifraLimpo = Criptografia::criptografar($limpo);
+    $cifraMascara = Criptografia::criptografar($comMascara);
+
+    if ($ignorarIdUsuario !== null) {
+        $stmt = $conexao->prepare(
+            "SELECT COUNT(*) FROM usuario WHERE CPF IN (:c1, :c2) AND id_usuario <> :id"
+        );
+        $stmt->execute([":c1" => $cifraLimpo, ":c2" => $cifraMascara, ":id" => $ignorarIdUsuario]);
+    } else {
+        $stmt = $conexao->prepare(
+            "SELECT COUNT(*) FROM usuario WHERE CPF IN (:c1, :c2)"
+        );
+        $stmt->execute([":c1" => $cifraLimpo, ":c2" => $cifraMascara]);
+    }
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+/**
  * Telefone: de 8 a 11 números. Aceita com ou sem DDD, porque os dados
  * iniciais do banco têm telefone sem DDD (ex.: 92876-5745) e a
  * bibliotecária precisa conseguir editar essas pessoas sem erro.
@@ -91,7 +130,13 @@ function turmaExiste(PDO $conexao, string $idTurma): bool
  * $obrigatorio = true na criação (tudo precisa vir preenchido, igual
  * o banco exige) e false na edição (campo em branco = "não muda").
  */
-function validarCamposDoTipo(PDO $conexao, string $tipo, array $post, bool $obrigatorio): array
+function validarCamposDoTipo(
+    PDO $conexao,
+    string $tipo,
+    array $post,
+    bool $obrigatorio,
+    ?int $ignorarIdUsuario = null
+): array
 {
     $d = ["ra" => null, "id_turma" => null, "disciplina" => null, "matricula" => null,
           "cpf" => null, "data_nascimento" => null, "endereco" => null, "telefone" => null];
@@ -161,6 +206,9 @@ function validarCamposDoTipo(PDO $conexao, string $tipo, array $post, bool $obri
             $d["cpf"] = validarCpf($cpf);
             if ($d["cpf"] === null) {
                 return ["CPF inválido: precisa ter 11 números.", $d];
+            }
+            if (cpfJaCadastrado($conexao, $d["cpf"], $ignorarIdUsuario)) {
+                return ["Esse CPF já está cadastrado para outra pessoa.", $d];
             }
         }
     }

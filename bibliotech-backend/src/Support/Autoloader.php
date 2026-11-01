@@ -49,12 +49,16 @@ final class Autoloader
             return true;
         }
 
-        // 4. Fallback para controllers/services/support diretos
+        // 4. Fallback para controllers/services/support diretos (incluindo classes com namespace Bibliotech\*)
         $locations = ['Controllers', 'Services', 'Support'];
         foreach ($locations as $loc) {
             $srcFile = self::$baseDir . '/src/' . $loc . '/' . $class . '.php';
             if (file_exists($srcFile)) {
                 require_once $srcFile;
+                $namespaced = "Bibliotech\\{$loc}\\{$class}";
+                if (!class_exists($class, false) && class_exists($namespaced, false)) {
+                    class_alias($namespaced, $class);
+                }
                 return true;
             }
         }

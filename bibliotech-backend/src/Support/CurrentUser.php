@@ -13,31 +13,15 @@ final class CurrentUser
 {
     public static function id(): int
     {
-        // Garante que a sessão está ligada
-        if (session_status() === PHP_SESSION_NONE) {
+        // Garante que a sessão foi lida (sem reabrir trava de escrita se já foi lida e fechada)
+        if (session_status() === PHP_SESSION_NONE && !isset($_SESSION)) {
             session_start();
         }
 
-        // 1. Prioridade: Sessão ativa do PHP
+        // Autenticação exclusivamente via sessão verificada do PHP (impede falsificação por cabeçalhos HTTP)
         $id = $_SESSION['id_usuario'] ?? null;
-        if (is_int($id) || (is_string($id) && ctype_digit($id))) {
+        if ((is_int($id) || (is_string($id) && ctype_digit($id))) && (int) $id > 0) {
             return (int) $id;
-        }
-
-        // 2. Alternativa para clientes REST externos / mobile: Authorization: Bearer <token_ou_id>
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
-        $authHeader = (string) ($headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '');
-        if (str_starts_with($authHeader, 'Bearer ')) {
-            $token = trim(substr($authHeader, 7));
-            if (ctype_digit($token)) {
-                return (int) $token;
-            }
-            if (str_contains($token, ':')) {
-                [$possibleId] = explode(':', $token, 2);
-                if (ctype_digit($possibleId)) {
-                    return (int) $possibleId;
-                }
-            }
         }
 
         JsonResponse::error('Você precisa estar logado para acessar isso.', 401, 'authentication_required');
@@ -54,8 +38,25 @@ final class CurrentUser
         $active = $statement->fetchColumn();
 
         if ($active === false || (int) $active === 0) {
+            if (session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
             $_SESSION = [];
-            session_destroy();
+            if (ini_get('session.use_cookies')) {
+                $params = session_get_cookie_params();
+                setcookie(
+                    session_name(),
+                    '',
+                    time() - 42000,
+                    $params['path'],
+                    $params['domain'],
+                    $params['secure'],
+                    $params['httponly']
+                );
+            }
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
             JsonResponse::error('Conta inativa ou inexistente.', 403, 'account_inactive');
         }
     }

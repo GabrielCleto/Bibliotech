@@ -117,7 +117,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
                 // Na edição, campo em branco = "não muda"
                 [$erro, $basico] = validarBasico($_POST, false, false);
                 if ($erro === null) {
-                    [$erro, $campos] = validarCamposDoTipo($conexao, $tipo, $_POST, false);
+                    [$erro, $campos] = validarCamposDoTipo($conexao, $tipo, $_POST, false, (int) $idUsuario);
                 }
 
                 if ($erro !== null) {
@@ -271,8 +271,29 @@ try {
     if ($e->getCode() === "45000") {
         $mensagem = trim($mensagem . " " . mensagemDoBanco($e));
     } else {
-        error_log($e->getMessage());
-        $mensagem = trim($mensagem . " Não foi possível carregar a lista de professores agora.");
+        error_log("sp_listar_professores falhou, usando vw_professores: " . $e->getMessage());
+        try {
+            $stmtAtiva = $conexao->prepare(
+                "SELECT COUNT(*) FROM usuario
+                 WHERE id_usuario = ? AND tipo_usuario = 'bibliotecario' AND ativo = 1"
+            );
+            $stmtAtiva->execute([$idBibliotecario]);
+            if ((int) $stmtAtiva->fetchColumn() === 0) {
+                throw new RuntimeException("Somente a bibliotecária pode consultar professores.");
+            }
+
+            $professores = $conexao->query(
+                "SELECT id_usuario, matricula, nome, email, telefone, disciplina,
+                        IF(ativo, 'Ativo', 'Inativo') AS situacao,
+                        criado_em, atualizado_em
+                 FROM vw_professores ORDER BY nome"
+            )->fetchAll();
+        } catch (RuntimeException $e2) {
+            $mensagem = trim($mensagem . " " . $e2->getMessage());
+        } catch (PDOException $e2) {
+            error_log($e2->getMessage());
+            $mensagem = trim($mensagem . " Não foi possível carregar a lista de professores agora.");
+        }
     }
 }
 
@@ -300,26 +321,28 @@ if (isset($_GET["editar"])) {
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+<!-- Cabeçalho da página -->
 <head>
     <?= sem_cache_js() ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Usuários - Biblioteca Virtual</title>
 
-    <!-- Estilos -->
+    <!-- Folhas de estilo -->
     <link rel="stylesheet" href="./CSS/principal.css">
     <link rel="stylesheet" href="./CSS/gerenciar_usuario.css">
 </head>
 <body>
 
-    <!-- RENDER BACKGROUND -->
+    <!-- Imagem de fundo -->
     <div class="RENDER BACKGROUND">
         <img src="./source/Arthur/home/Group 631.png" alt="Background">
     </div>
 
+    <!-- Container principal -->
     <main class="app-layout">
         
-        <!-- BARRA DE NAVEGAÇÃO TOPO -->
+        <!-- Barra de navegação superior -->
         <nav class="topbar">
             <div class="LOGO">
                 <a href="principal.php" class="btn-voltar">
@@ -331,7 +354,7 @@ if (isset($_GET["editar"])) {
             </div>
         </nav>
 
-        <!-- HERO SECTION -->
+        <!-- Cabeçalho da tela -->
         <header class="hero-banner" style="padding: 30px 40px;">
             <div class="hero-content">
                 <h1>Gerenciamento de <span class="text-highlight">Usuários</span> 👥</h1>
@@ -345,7 +368,7 @@ if (isset($_GET["editar"])) {
             <?php endif; ?>
         </header>
 
-        <!-- SEÇÃO DE EDIÇÃO DE USUÁRIO (SÓ APARECE SE CLICAR EM EDITAR) -->
+        <!-- Seção de edição de usuário -->
         <?php if ($registroEditar): ?>
             <section class="modules-section">
                 <div class="glass-card form-card border-cyan">
@@ -429,7 +452,7 @@ if (isset($_GET["editar"])) {
             </section>
         <?php endif; ?>
 
-        <!-- CRIAR NOVO USUÁRIO -->
+        <!-- Formulário para criar novo usuário -->
         <section class="modules-section">
             <div class="glass-card form-card">
                 <h3 class="form-title"><span class="emoji">➕</span> Criar Novo Usuário</h3>
@@ -464,7 +487,7 @@ if (isset($_GET["editar"])) {
                         </div>
                     </div>
 
-                    <!-- CAMPOS EXTRAS: ALUNO -->
+                    <!-- Campos extras: Aluno -->
                     <div id="novo-campos-aluno" class="dynamic-fieldset form-grid">
                         <div class="full-width"><h4 class="fieldset-title">Dados Acadêmicos (Aluno)</h4></div>
                         <div class="input-wrapper">
@@ -492,7 +515,7 @@ if (isset($_GET["editar"])) {
                         </div>
                     </div>
 
-                    <!-- CAMPOS EXTRAS: PROFESSOR -->
+                    <!-- Campos extras: Professor -->
                     <div id="novo-campos-professor" class="dynamic-fieldset form-grid" style="display:none">
                         <div class="full-width"><h4 class="fieldset-title">Dados Institucionais (Professor)</h4></div>
                         <div class="input-wrapper">
@@ -505,7 +528,7 @@ if (isset($_GET["editar"])) {
                         </div>
                     </div>
 
-                    <!-- DADOS COMPARTILHADOS -->
+                    <!-- Dados compartilhados -->
                     <div class="dynamic-fieldset form-grid">
                         <div id="novo-campos-cpf" class="input-wrapper">
                             <label>CPF</label>
@@ -526,9 +549,22 @@ if (isset($_GET["editar"])) {
             </div>
         </section>
 
-        <!-- LISTAGEM: ALUNOS -->
+        <!-- Listagem: Base de Alunos -->
         <section class="modules-section table-section">
-            <h2 class="section-title">Base de Alunos</h2>
+            <!-- Cabeçalho e barra de pesquisa de alunos -->
+            <div class="section-header-search">
+                <h2 class="section-title">Base de Alunos</h2>
+                <div class="search-input-wrapper">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input
+                        type="search"
+                        class="search-input input-busca-tabela"
+                        placeholder="Pesquisar em Base de Alunos..."
+                        aria-label="Pesquisar na Base de Alunos"
+                    >
+                </div>
+            </div>
+            <!-- Tabela de alunos -->
             <div class="glass-card table-card">
                 <div class="table-responsive">
                     <table class="data-table">
@@ -573,9 +609,22 @@ if (isset($_GET["editar"])) {
             </div>
         </section>
 
-        <!-- LISTAGEM: PROFESSORES -->
+        <!-- Listagem: Corpo Docente -->
         <section class="modules-section table-section">
-            <h2 class="section-title">Corpo Docente</h2>
+            <!-- Cabeçalho e barra de pesquisa de professores -->
+            <div class="section-header-search">
+                <h2 class="section-title">Corpo Docente</h2>
+                <div class="search-input-wrapper">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input
+                        type="search"
+                        class="search-input input-busca-tabela"
+                        placeholder="Pesquisar em Corpo Docente..."
+                        aria-label="Pesquisar no Corpo Docente"
+                    >
+                </div>
+            </div>
+            <!-- Tabela de professores -->
             <div class="glass-card table-card">
                 <div class="table-responsive">
                     <table class="data-table">
@@ -620,9 +669,22 @@ if (isset($_GET["editar"])) {
             </div>
         </section>
 
-        <!-- LISTAGEM: BIBLIOTECÁRIOS -->
+        <!-- Listagem: Administração do Sistema -->
         <section class="modules-section table-section">
-            <h2 class="section-title">Administração do Sistema</h2>
+            <!-- Cabeçalho e barra de pesquisa de bibliotecários -->
+            <div class="section-header-search">
+                <h2 class="section-title">Administração do Sistema</h2>
+                <div class="search-input-wrapper">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input
+                        type="search"
+                        class="search-input input-busca-tabela"
+                        placeholder="Pesquisar em Administração do Sistema..."
+                        aria-label="Pesquisar na Administração do Sistema"
+                    >
+                </div>
+            </div>
+            <!-- Tabela de bibliotecários -->
             <div class="glass-card table-card">
                 <div class="table-responsive">
                     <table class="data-table">
@@ -668,7 +730,7 @@ if (isset($_GET["editar"])) {
 
     </main>
 
-    <!-- ================= HOTBAR GLOBAL ================= -->
+    <!-- Hotbar global de navegação -->
     <nav class="global-hotbar">
         <a href="principal.php" class="hotbar-item">
             <span class="hotbar-icon">🏠</span>
@@ -692,9 +754,8 @@ if (isset($_GET["editar"])) {
             <span class="hotbar-text">Sair</span>
         </a>
     </nav>
-    <!-- ================= FIM DA HOTBAR ================= -->
 
-    <!-- SCRIPTS -->
+    <!-- Script de gerenciamento de usuários -->
     <script src="./javascript/gerenciar_usuario.js"></script>
 </body>
 </html>

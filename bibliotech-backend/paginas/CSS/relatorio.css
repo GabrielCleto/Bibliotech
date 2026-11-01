@@ -1,0 +1,704 @@
+/* CSS dos relatórios */
+
+/* Container principal */
+.relatorios {
+    position: relative;
+    z-index: 2;
+    width: calc(100% - 40px);
+    max-width: 1200px;
+    margin: 35px auto;
+    padding: 32px;
+    color: #ffffff;
+
+    background: rgba(8, 20, 38, 0.88);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 20px;
+
+    box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.35),
+        0 0 25px rgba(0, 229, 255, 0.04);
+
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    animation: relatorioEntrada 0.5s ease-out;
+}
+
+/* Linha decorativa do topo */
+.relatorios::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 2px;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #00a7b5,
+        #00e5ff,
+        transparent
+    );
+}
+
+/* Botão de voltar ao menu */
+.voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 22px;
+    padding: 10px 18px;
+
+    color: #00e5ff;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    border-radius: 50px;
+
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+/* Efeito hover do botão de voltar */
+.voltar:hover {
+    color: #ffffff;
+    background: rgba(0, 167, 181, 0.25);
+    border-color: rgba(0, 229, 255, 0.65);
+    box-shadow: 0 4px 14px rgba(0, 229, 255, 0.18);
+    transform: translateX(-4px);
+}
+
+/* Título principal */
+.relatorios h1 {
+    margin-bottom: 10px;
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* Detalhe abaixo do título principal */
+.relatorios h1::after {
+    content: "";
+    display: block;
+    width: 65px;
+    height: 4px;
+    margin-top: 14px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #00a7b5, #00e5ff);
+}
+
+/* Texto de descrição */
+.relatorios .descricao {
+    margin: 16px 0 28px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+/* Menu de filtros dos relatórios */
+.menu-relatorios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Botões de filtro dos relatórios */
+.menu-relatorios a,
+.menu-relatorios .btn-relatorio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 11px 18px;
+
+    color: #d9e6f7;
+    background: rgba(15, 32, 58, 0.75);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 12px;
+
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+    transition:
+        color 0.25s ease,
+        background 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+/* Efeito hover nos botões de filtro */
+.menu-relatorios a:hover,
+.menu-relatorios .btn-relatorio:hover {
+    color: #ffffff;
+    background: rgba(0, 167, 181, 0.2);
+    border-color: rgba(0, 229, 255, 0.65);
+    box-shadow: 0 6px 16px rgba(0, 229, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Botão de filtro selecionado */
+.menu-relatorios a.selecionado,
+.menu-relatorios .btn-relatorio.selecionado {
+    color: #ffffff;
+    background: linear-gradient(135deg, #087f8c, #00b4c4);
+    border-color: #00e5ff;
+    box-shadow:
+        0 6px 20px rgba(0, 229, 255, 0.28),
+        0 0 0 1px rgba(0, 229, 255, 0.2) inset;
+}
+
+/* Área dos botões Imprimir e Salvar */
+.acoes-relatorio {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+/* Estilo base dos botões Imprimir e Salvar */
+.btn-acao-relatorio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 20px;
+
+    color: #ffffff;
+    background: linear-gradient(135deg, #087f8c, #009ba8);
+    border: 1px solid #00e5ff;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+
+    box-shadow: 0 4px 14px rgba(0, 167, 181, 0.22);
+
+    transition:
+        background 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+/* Hover do botão Imprimir */
+.btn-acao-relatorio:hover {
+    background: linear-gradient(135deg, #0a95a4, #00b8c7);
+    box-shadow: 0 6px 18px rgba(0, 229, 255, 0.32);
+    transform: translateY(-2px);
+}
+
+/* Variação visual do botão Salvar */
+.btn-salvar-relatorio {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: rgba(0, 229, 255, 0.45);
+    color: #55dce5;
+}
+
+/* Hover do botão Salvar */
+.btn-salvar-relatorio:hover {
+    color: #ffffff;
+    background: rgba(0, 167, 181, 0.28);
+    border-color: #00e5ff;
+}
+
+/* Divisória entre blocos quando exibe todos os relatórios */
+.bloco-relatorio-individual + .bloco-relatorio-individual {
+    margin-top: 34px;
+    padding-top: 26px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Foco de acessibilidade pelo teclado */
+.menu-relatorios a:focus-visible,
+.menu-relatorios .btn-relatorio:focus-visible,
+.btn-acao-relatorio:focus-visible,
+.voltar:focus-visible {
+    outline: 2px solid #00e5ff;
+    outline-offset: 4px;
+}
+
+/* Cabeçalho do relatório com título e barra de pesquisa ao lado */
+.cabecalho-tabela-relatorio {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+/* Subtítulo do relatório ativo */
+.relatorios h2 {
+    margin-bottom: 0;
+    color: #ffffff;
+    font-size: clamp(20px, 3vw, 25px);
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+/* Barra de pesquisa ao lado do título */
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 320px;
+    max-width: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: #00e5ff;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.18);
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px 10px 42px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-family: inherit;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Container da tabela com rolagem lateral */
+.tabela-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+
+    background: rgba(6, 17, 32, 0.75);
+    border: 1px solid rgba(113, 156, 192, 0.2);
+    border-radius: 12px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #087f8c #101d30;
+}
+
+/* Barra de rolagem da tabela */
+.tabela-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.tabela-container::-webkit-scrollbar-track {
+    background: #101d30;
+    border-radius: 10px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb {
+    background: #087f8c;
+    border-radius: 10px;
+}
+
+/* Estrutura da tabela */
+.tabela-relatorios {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    color: #e9f1fc;
+    font-size: 14px;
+    background: transparent;
+}
+
+/* Células da tabela */
+.tabela-relatorios th,
+.tabela-relatorios td {
+    padding: 15px 17px;
+    text-align: left;
+    vertical-align: middle;
+
+    border-bottom: 1px solid rgba(148, 183, 213, 0.12);
+    white-space: nowrap;
+}
+
+/* Cabeçalho da tabela */
+.tabela-relatorios thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+
+    color: #ffffff;
+    background: #102b43;
+
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    border-bottom: 2px solid #00a7b5;
+}
+
+/* Linhas pares da tabela */
+.tabela-relatorios tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+/* Transição e hover das linhas da tabela */
+.tabela-relatorios tbody tr {
+    transition: background 0.2s ease;
+}
+
+.tabela-relatorios tbody tr:hover {
+    background: rgba(0, 167, 181, 0.12);
+}
+
+/* Remove borda da última linha */
+.tabela-relatorios tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Destaque da primeira coluna */
+.tabela-relatorios tbody td:first-child {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Contador de registros */
+.relatorios > p:not(.descricao):not(.mensagem-erro):not(.mensagem-vazia) {
+    margin-top: 18px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 14px;
+}
+
+.relatorios > p strong {
+    color: #4de1e8;
+    font-weight: 700;
+}
+
+/* Alerta de tabela vazia */
+.mensagem-vazia {
+    margin: 18px 0;
+    padding: 20px;
+
+    color: #dce9f8;
+    background: rgba(96, 165, 250, 0.08);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    border-left: 4px solid #60a5fa;
+    border-radius: 10px;
+
+    line-height: 1.6;
+}
+
+/* Alerta de erro */
+.mensagem-erro {
+    margin: 18px 0;
+    padding: 20px;
+
+    color: #ffd5d5;
+    background: rgba(239, 68, 68, 0.09);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-left: 4px solid #f87171;
+    border-radius: 10px;
+
+    line-height: 1.6;
+}
+
+/* Animação de entrada do card */
+@keyframes relatorioEntrada {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade para tablets */
+@media (max-width: 768px) {
+    .relatorios {
+        width: calc(100% - 24px);
+        margin: 18px auto;
+        padding: 22px 16px;
+        border-radius: 16px;
+    }
+
+    .relatorios .descricao {
+        font-size: 14px;
+    }
+
+    .menu-relatorios {
+        gap: 8px;
+        margin-bottom: 20px;
+        padding-bottom: 18px;
+    }
+
+    .menu-relatorios a,
+    .menu-relatorios .btn-relatorio {
+        flex: 1 1 calc(50% - 8px);
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    .acoes-relatorio .btn-acao-relatorio {
+        flex: 1 1 calc(50% - 8px);
+    }
+
+    .tabela-relatorios {
+        font-size: 13px;
+    }
+
+    .tabela-relatorios th,
+    .tabela-relatorios td {
+        padding: 12px;
+    }
+}
+
+/* Responsividade para celulares */
+@media (max-width: 420px) {
+    .relatorios {
+        width: calc(100% - 16px);
+        padding: 20px 12px;
+    }
+
+    .menu-relatorios a,
+    .menu-relatorios .btn-relatorio,
+    .acoes-relatorio .btn-acao-relatorio {
+        flex-basis: 100%;
+    }
+
+    .relatorios h1 {
+        font-size: 28px;
+    }
+
+    .relatorios h2 {
+        font-size: 20px;
+    }
+}
+
+/* Redução de movimento para acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+    .relatorios,
+    .menu-relatorios a,
+    .menu-relatorios .btn-relatorio,
+    .btn-acao-relatorio,
+    .tabela-relatorios tbody tr,
+    .voltar {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* Hotbar global (menu flutuante inferior) */
+.global-hotbar {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+
+    box-shadow:
+        0 15px 35px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 229, 255, 0.1) inset;
+
+    animation: hotbarSlideUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Itens da hotbar */
+.hotbar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 16px;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    min-width: 70px;
+}
+
+/* Hover nos itens da hotbar */
+.hotbar-item:hover {
+    color: #00e5ff;
+    background: rgba(0, 229, 255, 0.1);
+    transform: translateY(-5px);
+}
+
+/* Ícones e textos da hotbar */
+.hotbar-icon {
+    font-size: 22px;
+    margin-bottom: 4px;
+    transition: transform 0.3s ease;
+}
+
+.hotbar-item:hover .hotbar-icon {
+    transform: scale(1.15);
+}
+
+.hotbar-text {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Container do ícone de notificações */
+.hotbar-icon-wrapper {
+    position: relative;
+    display: flex;
+}
+
+/* Bolinha de notificações */
+.hotbar-badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background-color: #ef4444;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 2px solid #0f172a;
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+    animation: pulseBadge 2s infinite;
+}
+
+/* Hover do botão sair */
+.hotbar-logout:hover {
+    color: #ff4d4d;
+    background: rgba(255, 77, 77, 0.1);
+}
+
+/* Espaço no final da página para a hotbar não cobrir o conteúdo */
+body {
+    padding-bottom: 100px !important;
+}
+
+/* Animações da hotbar */
+@keyframes hotbarSlideUp {
+    from {
+        opacity: 0;
+        bottom: -50px;
+    }
+    to {
+        opacity: 1;
+        bottom: 25px;
+    }
+}
+
+@keyframes pulseBadge {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+/* Responsividade da hotbar */
+@media (max-width: 600px) {
+    .global-hotbar {
+        width: 90%;
+        bottom: 15px;
+        padding: 8px 10px;
+        justify-content: space-between;
+    }
+
+    .hotbar-item {
+        min-width: 0;
+        flex: 1;
+        padding: 6px 4px;
+    }
+}
+
+/* Estilo para impressão do relatório */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .RENDER.BACKGROUND,
+    .voltar,
+    .menu-relatorios,
+    .acoes-relatorio,
+    .global-hotbar {
+        display: none !important;
+    }
+
+    .relatorios {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #000000 !important;
+    }
+
+    .relatorios h1,
+    .relatorios h2,
+    .relatorios .descricao,
+    .tabela-relatorios th,
+    .tabela-relatorios td {
+        color: #000000 !important;
+        background: transparent !important;
+    }
+
+    .tabela-container {
+        overflow: visible !important;
+        border: 1px solid #cccccc !important;
+        background: transparent !important;
+    }
+
+    .tabela-relatorios th,
+    .tabela-relatorios td {
+        border-bottom: 1px solid #cccccc !important;
+        white-space: normal !important;
+    }
+}

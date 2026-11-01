@@ -10,7 +10,10 @@ final class BookController
 
     public function index(): never
     {
-        $search = trim($_GET['search'] ?? $_GET['q'] ?? '');
+        $search = Request::queryString('search');
+        if ($search === '') {
+            $search = Request::queryString('q');
+        }
         $page = Request::integer('page');
         $perPage = Request::integer('per_page');
 
@@ -84,6 +87,9 @@ final class BookController
     public function show(array $params): never
     {
         $bookId = (int) ($params['bookId'] ?? 0);
+        if ($bookId <= 0) {
+            JsonResponse::error('ID do livro inválido.', 400, 'invalid_book_id');
+        }
         $sql = "SELECT L.id_livro, L.titulo, L.ISBN, L.publicacao, L.editora,
                        L.id_autor, A.nome_autor AS autor,
                        L.id_cat, C.nome_cat AS categoria,

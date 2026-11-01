@@ -5,11 +5,21 @@
 #
 # Precisa do módulo "mod_rewrite" ligado (no XAMPP já vem ligado).
 
+Options -Indexes
+
 RewriteEngine On
+
+# Bloqueia acesso HTTP direto a arquivos de configuração, credenciais, logs e código interno
+RewriteRule ^(\.env.*|composer\.(json|lock)|README\.md|GUIA_INTEGRACAO\.md|PENDENCIAS_IDENTIFICADAS\.md)$ - [F,L,NC]
+RewriteRule ^(config|models|src|storage|bin)(/|$) - [F,L,NC]
+
+# Compatibilidade case-insensitive em servidores Linux para folhas de estilo em paginas/CSS/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^paginas/css/(.*)$ paginas/CSS/$1 [L]
 
 # Só redireciona se NÃO for um arquivo ou pasta que já existe de verdade
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Qualquer coisa que comece com "api/" vai pro index.php
-RewriteRule ^api/ public/index.php [QSA,L]
+# Qualquer coisa que comece com "api" vai pro public/index.php
+RewriteRule ^api(/.*)?$ public/index.php [QSA,L]

@@ -19,7 +19,7 @@ if (!isset($_SESSION["id_usuario"])) {
 $conexao = Conexao::getConexao();
 exigirContaAtiva($conexao);
 
-$idUsuario = $_SESSION["id_usuario"];
+$idUsuario = (int) $_SESSION["id_usuario"];
 $mensagem = "";
 
 $tokenValido = $_SERVER["REQUEST_METHOD"] !== "POST" || csrf_valido($_POST["csrf_token"] ?? null);
@@ -28,7 +28,7 @@ session_write_close();
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["renovar"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["renovar"]) && is_scalar($_POST["renovar"])) {
     $logica = new Emprestimo($conexao);
     $resultado = $logica->renovarEmprestimo((int) $_POST["renovar"], $idUsuario);
     $mensagem = $resultado["mensagem"];
@@ -154,9 +154,9 @@ function statusEmprestimo(array $item): string
                             <div class="info-item"><span>ISBN</span><strong><?= htmlspecialchars($item["ISBN"], ENT_QUOTES, "UTF-8") ?></strong></div>
                             <div class="info-item"><span>Editora</span><strong><?= htmlspecialchars($item["editora"], ENT_QUOTES, "UTF-8") ?></strong></div>
                             <div class="info-item"><span>Ano</span><strong><?= htmlspecialchars((string) $item["publicacao"], ENT_QUOTES, "UTF-8") ?></strong></div>
-                            <div class="info-item"><span>Empréstimo</span><strong><?= htmlspecialchars((string) $item["data_emp"], ENT_QUOTES, "UTF-8") ?></strong></div>
-                            <div class="info-item"><span>Devolução Prevista</span><strong><?= htmlspecialchars((string) $item["data_dev_prevista"], ENT_QUOTES, "UTF-8") ?></strong></div>
-                            <div class="info-item"><span>Devolvido em</span><strong><?= htmlspecialchars((string) ($item["data_dev"] ?? "—"), ENT_QUOTES, "UTF-8") ?></strong></div>
+                            <div class="info-item"><span>Empréstimo</span><strong><?= htmlspecialchars(formatarDataBr($item["data_emp"]), ENT_QUOTES, "UTF-8") ?></strong></div>
+                            <div class="info-item"><span>Devolução Prevista</span><strong><?= htmlspecialchars(formatarDataBr($item["data_dev_prevista"]), ENT_QUOTES, "UTF-8") ?></strong></div>
+                            <div class="info-item"><span>Devolvido em</span><strong><?= htmlspecialchars(formatarDataBr($item["data_dev"]), ENT_QUOTES, "UTF-8") ?></strong></div>
                             <div class="info-item"><span>Dias de atraso</span><strong><?= (int) $item["dev_pdia"] > 0 ? $item["dev_pdia"] : "—" ?></strong></div>
                             <div class="info-item"><span>Multa Pendente</span><strong><?= $item["multa_pendente"] ? "R$ " . number_format((float) $item["valor_multa"], 2, ",", ".") : "Não" ?></strong></div>
                         </div>

@@ -9,23 +9,27 @@ require __DIR__ . "/../config/Conexao.php";
 require __DIR__ . "/../config/ContaAtiva.php";
 require __DIR__ . "/../config/Csrf.php";
 
-if (!isset($_SESSION["id_usuario"])) {
-    header("Location: login.php");
-    exit;
-}
-
+$estaLogado = isset($_SESSION["id_usuario"]);
 $conexao = Conexao::getConexao();
-exigirContaAtiva($conexao);
 
-$idUsuario = $_SESSION["id_usuario"];
-$tipo = $_SESSION["tipo_usuario"];
-$ehBibliotecario = ($tipo === "bibliotecario" || $tipo === "admin");
-$podeSolicitar = ($tipo === "aluno" || $tipo === "professor");
+if ($estaLogado) {
+    exigirContaAtiva($conexao);
+    $idUsuario = $_SESSION["id_usuario"];
+    $tipo = $_SESSION["tipo_usuario"];
+    $ehBibliotecario = ($tipo === "bibliotecario" || $tipo === "admin");
+    $podeSolicitar = ($tipo === "aluno" || $tipo === "professor");
 
-// Busca o total de notificações não lidas para o badge da hotbar
-$stmtNoti = $conexao->prepare("SELECT COUNT(*) FROM notificacao WHERE id_usuario = :id AND lida = 0");
-$stmtNoti->execute([":id" => $idUsuario]);
-$totalNaoLidas = (int) $stmtNoti->fetchColumn();
+    // Busca o total de notificações não lidas para o badge da hotbar
+    $stmtNoti = $conexao->prepare("SELECT COUNT(*) FROM notificacao WHERE id_usuario = :id AND lida = 0");
+    $stmtNoti->execute([":id" => $idUsuario]);
+    $totalNaoLidas = (int) $stmtNoti->fetchColumn();
+} else {
+    $idUsuario = null;
+    $tipo = null;
+    $ehBibliotecario = false;
+    $podeSolicitar = false;
+    $totalNaoLidas = 0;
+}
 
 // Gera o token CSRF (se ainda não tiver um) ANTES de fechar a
 // sessão, porque depois de fechada não dá mais pra gravar nela
@@ -41,25 +45,27 @@ $livros = $conexao->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+<!-- Cabeçalho da página -->
 <head>
     <?= sem_cache_js() ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acervo Biblioteca Virtual</title>
+    <!-- Folha de estilo do acervo -->
     <link rel="stylesheet" href="./css/livros.css">
 </head>
 
 <body>
 
-    <!-- BACKGROUND RENDER (MANTIDO ORIGINAL) -->
+    <!-- Imagem de fundo -->
     <div class="RENDER BACKGROUND" aria-hidden="true">
         <img src="./source/Arthur/home/Group 631.png" alt="">
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL -->
+    <!-- Conteúdo principal -->
     <main class="app-layout">
 
-        <!-- HEADER DO ACERVO (Estilo Hero Banner) -->
+        <!-- Cabeçalho do acervo -->
         <header class="hero-banner acervo-header">
             <div class="acervo-logo">
                 <a href="principal.php" aria-label="Página inicial">
@@ -70,14 +76,14 @@ $livros = $conexao->query($sql)->fetchAll();
             <p class="acervo-subtitulo">Explore os exemplares disponíveis em nossa biblioteca digital.</p>
         </header>
 
-        <!-- BARRA DE AÇÕES SUPERIOR (Voltar e Cadastrar) -->
+        <!-- Barra de ações superior -->
         <div class="acervo-top-actions">
-            <!-- BOTÃO VOLTAR -->
+            <!-- Botão voltar -->
             <a href="principal.php" class="btn-action btn-voltar">
                 <span class="icon">↩️</span> Voltar ao Painel
             </a>
 
-            <!-- ÁREA DO BIBLIOTECÁRIO -->
+            <!-- Botão cadastrar livro (bibliotecário) -->
             <?php if ($ehBibliotecario): ?>
                 <a href="cadastro_livro.php" class="btn-action btn-cadastrar">
                     <span class="icon">➕</span> Cadastrar Novo Livro
@@ -85,34 +91,48 @@ $livros = $conexao->query($sql)->fetchAll();
             <?php endif; ?>
         </div>
 
-        <!-- ÁREA DOS LIVROS -->
+        <!-- Barra de pesquisa de livros -->
+        <div class="acervo-search-container">
+            <div class="search-input-wrapper">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+                <input
+                    type="search"
+                    id="inputBuscaLivros"
+                    class="search-input"
+                    placeholder="Pesquisar por título ou autor..."
+                    aria-label="Pesquisar livros no acervo"
+                >
+            </div>
+        </div>
+
+        <!-- Grade de livros -->
         <section class="livros-area">
             <div class="livros-grid">
 
-                <!-- LISTAGEM DOS LIVROS -->
+                <!-- Listagem dos livros -->
                 <?php foreach ($livros as $livro): ?>
 
-                <!-- CARD DO LIVRO (Estilo Glassmorphism) -->
+                <!-- Card do livro -->
                 <article
                     class="livro-card glass-card"
                     data-titulo="<?= htmlspecialchars($livro["titulo"], ENT_QUOTES, "UTF-8") ?>"
                     data-autor="<?= htmlspecialchars($livro["nome_autor"], ENT_QUOTES, "UTF-8") ?>"
                 >
 
-                    <!-- CAPA DO LIVRO (Fallback Mantido) -->
+                    <!-- Capa do livro -->
                     <div class="livro-capa">
                         <div class="livro-capa-fallback">
                             <?= htmlspecialchars($livro["titulo"], ENT_QUOTES, "UTF-8") ?>
                         </div>
                     </div>
 
-                    <!-- INFORMAÇÕES DO LIVRO -->
+                    <!-- Informações do livro -->
                     <div class="livro-conteudo">
                         <h2 class="livro-titulo"><?= htmlspecialchars($livro["titulo"], ENT_QUOTES, "UTF-8") ?></h2>
                         <p class="livro-autor"><?= htmlspecialchars($livro["nome_autor"], ENT_QUOTES, "UTF-8") ?></p>
                         <span class="livro-categoria"><?= htmlspecialchars($livro["nome_cat"], ENT_QUOTES, "UTF-8") ?></span>
 
-                        <!-- DISPONIBILIDADE -->
+                        <!-- Disponibilidade -->
                         <div class="livro-disponibilidade">
                             <?php if ($livro["quantidade_disponivel"] > 0): ?>
                                 <span class="status-disponivel"><span class="dot-green"></span> Disponível</span>
@@ -122,7 +142,7 @@ $livros = $conexao->query($sql)->fetchAll();
                             <?php endif; ?>
                         </div>
 
-                        <!-- AÇÕES DO LIVRO -->
+                        <!-- Ações do livro -->
                         <div class="livro-acoes">
 
                             <?php if ($ehBibliotecario): ?>
@@ -145,6 +165,14 @@ $livros = $conexao->query($sql)->fetchAll();
 
                                 <?php endif; ?>
 
+                            <?php elseif (!$estaLogado): ?>
+
+                                <?php if ($livro["quantidade_disponivel"] > 0): ?>
+                                    <a href="login.php" class="btn-card btn-solicitar">🔑 Entrar para Solicitar</a>
+                                <?php else: ?>
+                                    <span class="btn-card btn-indisponivel">⚠️ Indisponível</span>
+                                <?php endif; ?>
+
                             <?php endif; ?>
 
                         </div>
@@ -156,13 +184,13 @@ $livros = $conexao->query($sql)->fetchAll();
             </div>
         </section>
 
-        <!-- JAVASCRIPT DO LIVROS -->
+        <!-- Scripts dos livros -->
         <script src="./javascript/capas.js"></script>
         <script src="./javascript/livros.js"></script>
 
     </main>
 
-    <!-- ================= HOTBAR GLOBAL ================= -->
+    <!-- Hotbar global de navegação -->
     <nav class="global-hotbar">
         <a href="principal.php" class="hotbar-item">
             <span class="hotbar-icon">🏠</span>
@@ -181,12 +209,18 @@ $livros = $conexao->query($sql)->fetchAll();
             </div>
             <span class="hotbar-text">Avisos</span>
         </a>
-        <a href="logout.php" class="hotbar-item hotbar-logout">
-            <span class="hotbar-icon">🚪</span>
-            <span class="hotbar-text">Sair</span>
-        </a>
+        <?php if ($estaLogado): ?>
+            <a href="logout.php" class="hotbar-item hotbar-logout">
+                <span class="hotbar-icon">🚪</span>
+                <span class="hotbar-text">Sair</span>
+            </a>
+        <?php else: ?>
+            <a href="login.php" class="hotbar-item">
+                <span class="hotbar-icon">🔑</span>
+                <span class="hotbar-text">Entrar</span>
+            </a>
+        <?php endif; ?>
     </nav>
-    <!-- ================= FIM DA HOTBAR ================= -->
 
 </body>
 </html>

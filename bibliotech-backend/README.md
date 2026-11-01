@@ -10,9 +10,9 @@ Roda dentro do mesmo projeto (pasta no `htdocs` do XAMPP), servido pelo Apache d
 http://localhost/<pasta-do-projeto>/api/...
 ```
 
-Isso funciona graças ao arquivo `.htaccess` na raiz do projeto, que redireciona qualquer endereço começando com `api/` para `public/index.php`.
+Isso funciona graças ao arquivo `.htaccess` na raiz do `bibliotech-backend`, que redireciona qualquer endereço começando com `api/` para `public/index.php` e bloqueia acesso direto a pastas internas (`config/`, `models/`, `src/`, `storage/`, `bin/`) e arquivos sensíveis (`.env`).
 
-Execute `database/migrations/001_wishlist_notifications.sql` no banco `biblioteca` (já criado pelo script principal) antes de usar essas rotas.
+Importe o script principal do banco **`../database/Banco_de_dados_v1.1.sql`** (Versão 1.1 — que já inclui `lista_desejos`, `notificacao`, `reserva_fila`, `configuracao`, views e todas as stored procedures) antes de usar essas rotas.
 
 ## Autenticação
 

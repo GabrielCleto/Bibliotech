@@ -36,16 +36,16 @@ session_write_close();
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["aprovar"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["aprovar"]) && is_scalar($_POST["aprovar"])) {
     $resultado = $logica->aprovarSolicitacao((int) $_POST["aprovar"]);
     $mensagem = $resultado["mensagem"];
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["recusar"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["recusar"]) && is_scalar($_POST["recusar"])) {
     $resultado = $logica->recusarSolicitacao((int) $_POST["recusar"]);
     $mensagem = $resultado["mensagem"];
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["aprovar_renovacao"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["aprovar_renovacao"]) && is_scalar($_POST["aprovar_renovacao"])) {
     $resultado = $logica->aprovarRenovacao((int) $_POST["aprovar_renovacao"]);
     $mensagem = $resultado["mensagem"];
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["recusar_renovacao"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["recusar_renovacao"]) && is_scalar($_POST["recusar_renovacao"])) {
     $resultado = $logica->recusarRenovacao((int) $_POST["recusar_renovacao"]);
     $mensagem = $resultado["mensagem"];
 }

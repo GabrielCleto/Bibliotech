@@ -38,7 +38,7 @@ session_write_close();
 </head>
 <body>
 
-    <!-- RENDER BACKGROUND (FUNDO ORIGINAL MANTIDO) -->
+    <!-- RENDER BACKGROUND-->
     <div class="RENDER BACKGROUND">
         <img src="./source/Arthur/home/Group 631.png" alt="Background">
     </div>
@@ -67,7 +67,7 @@ session_write_close();
             </div>
         </header>
 
-        <!-- SESSÃO DE MÓDULOS / CARDS (PHP MANTIDO INTACTO) -->
+        <!-- SESSÃO DE MÓDULOS / CARDS-->
         <section class="modules-section">
             <h2 class="section-title">Painel de Controle</h2>
             
@@ -111,8 +111,9 @@ session_write_close();
                 <?php elseif ($tipo === "bibliotecario"): ?>
                     
                     <?php
-                    $totalPendentes = $conexao->query(
-                        "SELECT COUNT(*) AS total FROM emprestimo WHERE reserva = 1 AND emp_ativo = 0"
+                    // Soma tanto solicitações de novos empréstimos (emp_ativo = 0) quanto solicitações de renovação (emp_ativo = 1) pendentes
+                    $totalPendentes = (int) $conexao->query(
+                        "SELECT COUNT(*) AS total FROM emprestimo WHERE reserva = 1 AND data_dev IS NULL"
                     )->fetch()["total"];
                     ?>
                     

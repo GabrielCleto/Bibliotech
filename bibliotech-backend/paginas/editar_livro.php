@@ -24,7 +24,9 @@ if ($tipo !== "bibliotecario" && $tipo !== "admin") {
 }
 
 $mensagem = "";
-$idLivro = isset($_GET["id"]) ? (int) $_GET["id"] : null;
+$idLivro = (isset($_GET["id"]) && is_scalar($_GET["id"])) ? (int) $_GET["id"] : null;
+$anoMinimo = 1901;
+$anoMaximo = (int) date("Y");
 
 $tokenValido = $_SERVER["REQUEST_METHOD"] !== "POST" || csrf_valido($_POST["csrf_token"] ?? null);
 $tokenCsrf = csrf_token();
@@ -33,14 +35,18 @@ session_write_close();
 // Salvar a edição
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-    $idLivro = (int) ($_POST["id_livro"] ?? 0);
+    $idLivro = is_scalar($_POST["id_livro"] ?? null) ? (int) $_POST["id_livro"] : 0;
 } elseif ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $idLivro = (int) $_POST["id_livro"];
-    $titulo = trim($_POST["titulo"] ?? "");
-    $isbn = trim($_POST["isbn"] ?? "");
-    $editora = trim($_POST["editora"] ?? "");
-    $publicacao = trim($_POST["publicacao"] ?? "");
-    $novoTotal = (int) ($_POST["quantidade_total"] ?? 0);
+    $lerCampo = static fn(string $chave): string => is_string($_POST[$chave] ?? null) ? trim($_POST[$chave]) : "";
+
+    $idLivro = is_scalar($_POST["id_livro"] ?? null) ? (int) $_POST["id_livro"] : 0;
+    $titulo = $lerCampo("titulo");
+    $isbn = $lerCampo("isbn");
+    $editora = $lerCampo("editora");
+    $publicacao = $lerCampo("publicacao");
+    $qtdBruta = $lerCampo("quantidade_total");
+    $novoTotal = (ctype_digit($qtdBruta)) ? (int) $qtdBruta : -1;
+    $emprestadosAgora = 0;
 
     // Descobre quantas cópias desse livro estão emprestadas agora
     // (é o total atual menos o disponível atual, ANTES da edição)
@@ -51,26 +57,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     if (!$livroAtual) {
         $mensagem = "Livro não encontrado.";
     } else {
-        $emprestadosAgora = $livroAtual["quantidade_total"] - $livroAtual["quantidade_disponivel"];
+        $emprestadosAgora = (int) $livroAtual["quantidade_total"] - (int) $livroAtual["quantidade_disponivel"];
+        $anoValido = ctype_digit($publicacao)
+            && (int) $publicacao >= $anoMinimo
+            && (int) $publicacao <= $anoMaximo;
 
         if ($titulo === "" || $isbn === "" || $editora === "" || $publicacao === "") {
             $mensagem = "Título, ISBN, editora e ano de publicação são obrigatórios.";
-        } elseif ($novoTotal < $emprestadosAgora) {
+        } elseif (mb_strlen($titulo) > 150 || mb_strlen($isbn) > 17 || mb_strlen($editora) > 100) {
+            $mensagem = "Tamanho máximo excedido (Título: 150, ISBN: 17, Editora: 100 caracteres).";
+        } elseif (!$anoValido) {
+            $mensagem = "Ano de publicação inválido. Use um valor entre {$anoMinimo} e {$anoMaximo}.";
+        } elseif ($novoTotal < 0 || $novoTotal < $emprestadosAgora) {
             $mensagem = "O total não pode ser menor que {$emprestadosAgora}, que é quanto já está emprestado agora.";
         }
     }
 
-    // Se deu erro de validação, mostra de novo o que a pessoa tinha
+    // Se deu erro de validação (mas o livro existe), mostra de novo o que a pessoa tinha
     // digitado (em vez de voltar pro que já estava salvo no banco)
-    if ($mensagem !== "") {
+    if ($mensagem !== "" && $livroAtual) {
+        $totalExibicao = max(0, $novoTotal);
         $livroDigitado = [
             "id_livro" => $idLivro,
             "titulo" => $titulo,
             "ISBN" => $isbn,
             "editora" => $editora,
             "publicacao" => $publicacao,
-            "quantidade_total" => $novoTotal,
-            "quantidade_disponivel" => $novoTotal - $emprestadosAgora,
+            "quantidade_total" => $totalExibicao,
+            "quantidade_disponivel" => max(0, $totalExibicao - $emprestadosAgora),
         ];
     }
 

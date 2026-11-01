@@ -32,9 +32,9 @@ final class ReportController
     public function loans(): never
     {
         $this->authorize();
-        $status = $_GET['status'] ?? 'all';
+        $status = Request::queryString('status', 'all');
         $conditions = match ($status) {
-            'active' => 'E.emp_ativo = 1 AND E.data_dev IS NULL',
+            'active' => 'E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista >= CURDATE()',
             'overdue' => 'E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE()',
             'completed' => 'E.emp_ativo = 0 AND E.data_dev IS NOT NULL',
             'reserved' => 'E.reserva = 1',
@@ -43,6 +43,14 @@ final class ReportController
         };
         $page = Request::integer('page');
         $perPage = Request::integer('per_page');
+
+        $statusCase = "CASE
+                           WHEN E.emp_ativo = 1 AND E.reserva = 1 THEN 'aguardando_aprovacao_renovacao'
+                           WHEN E.reserva = 1 THEN 'aguardando_aprovacao'
+                           WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 'atrasado'
+                           WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'ativo'
+                           ELSE 'concluido'
+                       END AS status";
 
         if ($page !== null) {
             $page = max(1, $page);
@@ -58,14 +66,11 @@ final class ReportController
             $sql = "SELECT E.id_emprestimo, U.id_usuario, U.nome AS usuario, U.tipo_usuario,
                            L.id_livro, L.titulo, E.reserva, E.emp_ativo, E.multa_pendente,
                            E.data_emp, E.data_dev_prevista, E.data_dev,
-                           CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE()
-                                THEN 'atrasado'
-                                WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'ativo'
-                                ELSE 'concluido' END AS status
+                           {$statusCase}
                     FROM emprestimo E
                     INNER JOIN usuario U ON U.id_usuario = E.id_usuario
                     INNER JOIN livros L ON L.id_livro = E.id_livro
-                    WHERE {$conditions} ORDER BY E.data_emp DESC
+                    WHERE {$conditions} ORDER BY E.data_emp DESC, E.id_emprestimo DESC
                     LIMIT :limit OFFSET :offset";
             $statement = $this->db->prepare($sql);
             $statement->bindValue('limit', $perPage, PDO::PARAM_INT);
@@ -83,14 +88,11 @@ final class ReportController
         $sql = "SELECT E.id_emprestimo, U.id_usuario, U.nome AS usuario, U.tipo_usuario,
                        L.id_livro, L.titulo, E.reserva, E.emp_ativo, E.multa_pendente,
                        E.data_emp, E.data_dev_prevista, E.data_dev,
-                       CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE()
-                            THEN 'atrasado'
-                            WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'ativo'
-                            ELSE 'concluido' END AS status
+                       {$statusCase}
                 FROM emprestimo E
                 INNER JOIN usuario U ON U.id_usuario = E.id_usuario
                 INNER JOIN livros L ON L.id_livro = E.id_livro
-                WHERE {$conditions} ORDER BY E.data_emp DESC";
+                WHERE {$conditions} ORDER BY E.data_emp DESC, E.id_emprestimo DESC";
         $statement = $this->db->query($sql);
         JsonResponse::success($statement->fetchAll());
     }
@@ -139,7 +141,7 @@ final class ReportController
                        COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS emprestimos_concluidos
                 FROM turma T
                 INNER JOIN curso C ON C.id_curso = T.id_curso
-                LEFT JOIN aluno AL ON AL.id_turma = T.id_turma
+                LEFT JOIN usuario AL ON AL.id_turma = T.id_turma AND AL.tipo_usuario = 'aluno'
                 LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
                 WHERE {$whereClause}
                 GROUP BY T.id_turma, C.id_curso, C.nome_curso, T.turno, T.ano_calendario, T.periodo_letivo
@@ -174,7 +176,7 @@ final class ReportController
                        COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS emprestimos_concluidos
                 FROM curso C
                 LEFT JOIN turma T ON T.id_curso = C.id_curso
-                LEFT JOIN aluno AL ON AL.id_turma = T.id_turma
+                LEFT JOIN usuario AL ON AL.id_turma = T.id_turma AND AL.tipo_usuario = 'aluno'
                 LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
                 WHERE {$whereClause}
                 GROUP BY C.id_curso, C.nome_curso, C.Mtec
@@ -188,29 +190,29 @@ final class ReportController
     public function bySituation(): never
     {
         $this->authorize();
-        $situacao = $_GET['situacao'] ?? null;
+        $situacao = Request::queryString('situacao');
 
-        $where = ['1 = 1'];
+        $where = ["AL.tipo_usuario = 'aluno'"];
         $params = [];
 
-        if ($situacao !== null && trim($situacao) !== '') {
-            $where[] = 'AL.situacao = :situacao';
-            $params['situacao'] = trim($situacao);
+        if ($situacao !== '') {
+            $where[] = "IF(AL.ativo = 1, 'Ativo', 'Inativo') = :situacao";
+            $params['situacao'] = $situacao;
         }
 
         $whereClause = implode(' AND ', $where);
 
-        $sql = "SELECT AL.situacao,
+        $sql = "SELECT IF(AL.ativo = 1, 'Ativo', 'Inativo') AS situacao,
                        COUNT(DISTINCT AL.RA) AS total_alunos,
                        COUNT(DISTINCT E.id_emprestimo) AS total_emprestimos,
                        COALESCE(SUM(CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista >= CURDATE() THEN 1 ELSE 0 END), 0) AS emprestimos_ativos,
                        COALESCE(SUM(CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 1 ELSE 0 END), 0) AS emprestimos_atrasados,
                        COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS emprestimos_concluidos
-                FROM aluno AL
+                FROM usuario AL
                 LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
                 WHERE {$whereClause}
-                GROUP BY AL.situacao
-                ORDER BY AL.situacao ASC";
+                GROUP BY AL.ativo
+                ORDER BY situacao ASC";
 
         $statement = $this->db->prepare($sql);
         $statement->execute($params);
@@ -228,7 +230,7 @@ final class ReportController
         $where = ['1 = 1'];
         $params = [];
 
-        $status = $_GET['status'] ?? 'all';
+        $status = Request::queryString('status', 'all');
         if ($status === 'active') {
             $where[] = 'E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista >= CURDATE()';
         } elseif ($status === 'overdue') {
@@ -237,6 +239,8 @@ final class ReportController
             $where[] = 'E.emp_ativo = 0 AND E.data_dev IS NOT NULL';
         } elseif ($status === 'reserved') {
             $where[] = 'E.reserva = 1';
+        } elseif ($status !== 'all') {
+            JsonResponse::error('Status inválido.', 400, 'invalid_status');
         }
 
         $userId = Request::integer('id_usuario');
@@ -263,22 +267,32 @@ final class ReportController
             $params['id_turma'] = $classId;
         }
 
-        $situacao = $_GET['situacao'] ?? null;
-        if ($situacao !== null && trim($situacao) !== '') {
-            $where[] = 'AL.situacao = :situacao';
-            $params['situacao'] = trim($situacao);
+        $situacao = Request::queryString('situacao');
+        if ($situacao !== '') {
+            $where[] = "U.tipo_usuario = 'aluno' AND IF(U.ativo = 1, 'Ativo', 'Inativo') = :situacao";
+            $params['situacao'] = $situacao;
         }
 
-        $dataInicio = $_GET['data_inicio'] ?? null;
-        if ($dataInicio !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataInicio)) {
+        $dataInicio = Request::queryString('data_inicio');
+        if ($dataInicio !== '') {
+            if (!Request::validDate($dataInicio)) {
+                JsonResponse::error('Data inicial inválida. Use o formato AAAA-MM-DD.', 400, 'invalid_date');
+            }
             $where[] = 'E.data_emp >= :data_inicio';
             $params['data_inicio'] = $dataInicio;
         }
 
-        $dataFim = $_GET['data_fim'] ?? null;
-        if ($dataFim !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataFim)) {
+        $dataFim = Request::queryString('data_fim');
+        if ($dataFim !== '') {
+            if (!Request::validDate($dataFim)) {
+                JsonResponse::error('Data final inválida. Use o formato AAAA-MM-DD.', 400, 'invalid_date');
+            }
             $where[] = 'E.data_emp <= :data_fim';
             $params['data_fim'] = $dataFim;
+        }
+
+        if ($dataInicio !== '' && $dataFim !== '' && $dataInicio > $dataFim) {
+            JsonResponse::error('A data inicial não pode ser maior que a data final.', 400, 'invalid_date_range');
         }
 
         $whereClause = implode(' AND ', $where);
@@ -286,8 +300,7 @@ final class ReportController
         $countSql = "SELECT COUNT(*)
                      FROM emprestimo E
                      INNER JOIN usuario U ON U.id_usuario = E.id_usuario
-                     LEFT JOIN aluno AL ON AL.id_usuario = U.id_usuario
-                     LEFT JOIN turma T ON T.id_turma = AL.id_turma
+                     LEFT JOIN turma T ON T.id_turma = U.id_turma
                      LEFT JOIN curso C ON C.id_curso = T.id_curso
                      INNER JOIN livros L ON L.id_livro = E.id_livro
                      WHERE {$whereClause}";
@@ -297,7 +310,8 @@ final class ReportController
 
         $sql = "SELECT E.id_emprestimo,
                        U.id_usuario, U.nome AS usuario, U.email, U.tipo_usuario,
-                       AL.RA AS aluno_ra, AL.situacao AS aluno_situacao,
+                       U.RA AS aluno_ra,
+                       CASE WHEN U.tipo_usuario = 'aluno' THEN IF(U.ativo = 1, 'Ativo', 'Inativo') ELSE NULL END AS aluno_situacao,
                        C.id_curso, C.nome_curso,
                        T.id_turma, T.turno, T.ano_calendario, T.periodo_letivo,
                        L.id_livro, L.titulo AS livro_titulo, L.ISBN,
@@ -306,6 +320,7 @@ final class ReportController
                        E.data_emp, E.data_dev_prevista, E.data_dev,
                        E.emp_ativo, E.reserva, E.multa_pendente, E.dev_pdia, E.valor_multa,
                        CASE
+                           WHEN E.emp_ativo = 1 AND E.reserva = 1 THEN 'aguardando_aprovacao_renovacao'
                            WHEN E.reserva = 1 THEN 'aguardando_aprovacao'
                            WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 'atrasado'
                            WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'ativo'
@@ -313,8 +328,7 @@ final class ReportController
                        END AS status
                 FROM emprestimo E
                 INNER JOIN usuario U ON U.id_usuario = E.id_usuario
-                LEFT JOIN aluno AL ON AL.id_usuario = U.id_usuario
-                LEFT JOIN turma T ON T.id_turma = AL.id_turma
+                LEFT JOIN turma T ON T.id_turma = U.id_turma
                 LEFT JOIN curso C ON C.id_curso = T.id_curso
                 INNER JOIN livros L ON L.id_livro = E.id_livro
                 INNER JOIN autores A ON A.id_autor = L.id_autor

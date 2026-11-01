@@ -28,18 +28,23 @@ O projeto segue os princípios de **Clean Architecture**, **PSR-4** e **12-Facto
 ```text
 Biblioteca/
 ├── .gitignore                     # Proteção de credenciais, logs e temporários
-├── Banco_de_dados.sql             # Estrutura completa DDL, views e procedures
+├── GEMINI.md                      # Diretrizes de engenharia e escopo do projeto
 ├── README.md                      # Documentação principal do repositório
+├── database/                      # Script oficial versionado do banco de dados
+│   ├── README.md                  # Instruções de importação e integridade SQL
+│   └── Banco_de_dados_v1.1.sql    # Versão 1.1 oficial (primeira atualização pós-1.0)
 └── bibliotech-backend/
     ├── .env.example               # Template de variáveis de ambiente
-    ├── composer.json              # Metadados e padronização PSR-4
+    ├── .htaccess                  # Roteamento da API e proteção de diretórios internos
+    ├── composer.json              # Metadados (v1.1.0) e padronização PSR-4
     ├── GUIA_INTEGRACAO.md         # Manual detalhado para desenvolvedores Front-end
     ├── bin/
     │   └── generate_notifications.php # CLI Job para automação de avisos
     ├── config/                    # Conexões, criptografia e utilitários de segurança
     ├── models/                    # Modelos de domínio (Usuario, Emprestimo)
-    ├── paginas/                   # Interfaces administrativas prontas para uso
+    ├── paginas/                   # Interfaces web integradas ao back-end
     ├── public/                    # Ponto único de entrada da API REST (index.php)
+    ├── storage/logs/              # Diretório de logs estruturados da aplicação
     └── src/
         ├── Controllers/           # Controladores REST (Livros, Empréstimos, Relatórios)
         ├── Services/              # Serviços de domínio e notificações
@@ -69,10 +74,10 @@ Biblioteca/
    cp .env.example .env
    ```
 
-3. **Importe o Banco de Dados:**
+3. **Importe o Banco de Dados (v1.1):**
    - Acesse o **phpMyAdmin** (`http://localhost/phpmyadmin`).
-   - Crie um banco chamado `biblioteca` com charset `utf8mb4_general_ci`.
-   - Importe o script [Banco_de_dados.sql](file:///c:/xampp/htdocs/Biblioteca/Banco_de_dados.sql).
+   - Importe o script [database/Banco_de_dados_v1.1.sql](file:///c:/xampp/htdocs/Biblioteca/database/Banco_de_dados_v1.1.sql) (ele cria o banco `biblioteca` com charset `utf8mb4_general_ci`, tabelas, views, triggers, procedures e carga inicial de testes).
+   - Consulte [database/README.md](file:///c:/xampp/htdocs/Biblioteca/database/README.md) para detalhes de configuração e integridade SHA-256.
 
 4. **Acesse o Sistema:**
    - **Interface Web:** `http://localhost/Biblioteca/bibliotech-backend/paginas/login.php`

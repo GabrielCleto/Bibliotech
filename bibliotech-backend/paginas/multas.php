@@ -33,17 +33,17 @@ session_write_close();
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
-} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["quitar"])) {
+} elseif ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["quitar"]) && is_scalar($_POST["quitar"])) {
     $resultado = $logica->quitarMulta((int) $_POST["quitar"]);
     $mensagem = $resultado["mensagem"];
 }
 
-$sql = "SELECT E.id_emprestimo, U.nome, L.titulo, E.dev_pdia, E.valor_multa
+$sql = "SELECT E.id_emprestimo, U.nome, L.titulo, E.dev_pdia, E.valor_multa, E.emp_ativo
         FROM emprestimo E
         INNER JOIN usuario U ON U.id_usuario = E.id_usuario
         INNER JOIN livros L ON L.id_livro = E.id_livro
         WHERE E.multa_pendente = 1
-        ORDER BY E.dev_pdia DESC";
+        ORDER BY E.emp_ativo ASC, E.dev_pdia DESC";
 $multas = $conexao->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -66,6 +66,7 @@ $multas = $conexao->query($sql)->fetchAll();
             <th>Livro</th>
             <th>Dias de atraso</th>
             <th>Valor</th>
+            <th>Situação do Livro</th>
             <th></th>
         </tr>
         <?php foreach ($multas as $item): ?>
@@ -75,11 +76,22 @@ $multas = $conexao->query($sql)->fetchAll();
                 <td><?= $item["dev_pdia"] ?></td>
                 <td>R$ <?= number_format((float) $item["valor_multa"], 2, ",", ".") ?></td>
                 <td>
-                    <form method="POST" action="">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($tokenCsrf, ENT_QUOTES, "UTF-8") ?>">
-                        <input type="hidden" name="quitar" value="<?= $item["id_emprestimo"] ?>">
-                        <button type="submit">Marcar como paga</button>
-                    </form>
+                    <?php if ((int) $item["emp_ativo"] === 1): ?>
+                        <span style="color: #b30000; font-weight: bold;">Em atraso (não devolvido)</span>
+                    <?php else: ?>
+                        <span style="color: #007a00; font-weight: bold;">Devolvido (aguardando pagamento)</span>
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <?php if ((int) $item["emp_ativo"] === 1): ?>
+                        <a href="devolucoes.php" title="Ir para Devoluções">Registrar Devolução Primeiro</a>
+                    <?php else: ?>
+                        <form method="POST" action="">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($tokenCsrf, ENT_QUOTES, "UTF-8") ?>">
+                            <input type="hidden" name="quitar" value="<?= $item["id_emprestimo"] ?>">
+                            <button type="submit">Marcar como paga</button>
+                        </form>
+                    <?php endif; ?>
                 </td>
             </tr>
         <?php endforeach; ?>

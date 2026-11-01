@@ -17,8 +17,8 @@ $tokenCsrf = csrf_token();
 if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
     $mensagem = "Sessão expirada ou inválida. Tente novamente.";
 } elseif ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $email = trim($_POST["email"] ?? "");
-    $senha = $_POST["senha"] ?? "";
+    $email = is_string($_POST["email"] ?? null) ? trim($_POST["email"]) : "";
+    $senha = is_string($_POST["senha"] ?? null) ? $_POST["senha"] : "";
 
     $resultado = Usuario::autenticar($email, $senha);
 
@@ -38,6 +38,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$tokenValido) {
 
     $mensagem = $resultado["mensagem"];
 }
+
+session_write_close();
 ?>
 <!DOCTYPE html>
 

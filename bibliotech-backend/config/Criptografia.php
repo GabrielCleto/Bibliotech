@@ -31,14 +31,22 @@ final class Criptografia
 
     private static function getChaveBin(): string
     {
-        $hex = (string) \Bibliotech\Support\Env::get('APP_KEY', self::CHAVE_HEX_PADRAO);
-        return hex2bin($hex);
+        $hex = trim((string) \Bibliotech\Support\Env::get('APP_KEY', self::CHAVE_HEX_PADRAO));
+        if (strlen($hex) !== 64 || !ctype_xdigit($hex)) {
+            $hex = self::CHAVE_HEX_PADRAO;
+        }
+        $bin = hex2bin($hex);
+        return $bin !== false ? $bin : (string) hex2bin(self::CHAVE_HEX_PADRAO);
     }
 
     private static function getIvBin(): string
     {
-        $hex = (string) \Bibliotech\Support\Env::get('APP_IV', self::IV_HEX_PADRAO);
-        return hex2bin($hex);
+        $hex = trim((string) \Bibliotech\Support\Env::get('APP_IV', self::IV_HEX_PADRAO));
+        if (strlen($hex) !== 32 || !ctype_xdigit($hex)) {
+            $hex = self::IV_HEX_PADRAO;
+        }
+        $bin = hex2bin($hex);
+        return $bin !== false ? $bin : (string) hex2bin(self::IV_HEX_PADRAO);
     }
 
     public static function criptografar(?string $textoPuro): ?string
@@ -51,6 +59,9 @@ final class Criptografia
         $iv = self::getIvBin();
 
         $criptografado = openssl_encrypt($textoPuro, self::METODO, $chave, OPENSSL_RAW_DATA, $iv);
+        if ($criptografado === false) {
+            return null;
+        }
 
         // base64 pra virar um texto seguro de guardar em VARCHAR
         // (o resultado "cru" da criptografia tem bytes estranhos)

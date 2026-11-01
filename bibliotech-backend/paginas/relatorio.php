@@ -54,8 +54,8 @@ session_write_close();
    ============================================================ */
 
 // Qual relatório mostrar (vem de um link, ex: ?relatorio=populares)
-// O ?? usa "populares" como padrão se não vier nada na URL
-$relatorioEscolhido = $_GET["relatorio"] ?? "populares";
+// O ?? usa "populares" como padrão se não vier nada válido na URL
+$relatorioEscolhido = is_string($_GET["relatorio"] ?? null) ? $_GET["relatorio"] : "populares";
 
 /* ============================================================
    BLOCO 4 - MONTAGEM DO SQL (um if/elseif pra cada relatório)
@@ -97,6 +97,8 @@ if ($relatorioEscolhido === "emprestimos") {
                    DATE_FORMAT(E.data_dev_prevista, '%d/%m/%Y') AS data_dev_prevista,
                    DATE_FORMAT(E.data_dev, '%d/%m/%Y') AS data_dev,
                    CASE
+                       WHEN E.emp_ativo = 1 AND E.reserva = 1 THEN 'Aguardando aprovação de renovação'
+                       WHEN E.reserva = 1 THEN 'Aguardando aprovação'
                        WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 'Atrasado'
                        WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'Ativo'
                        ELSE 'Concluído'
@@ -123,7 +125,7 @@ if ($relatorioEscolhido === "emprestimos") {
 // ---- Relatório 3: empréstimos agrupados por turma ----
 } elseif ($relatorioEscolhido === "turma") {
     $titulo = "Empréstimos por Turma";
-    // Liga turma -> curso e turma -> aluno -> emprestimo
+    // Liga turma -> curso e turma -> usuario (tipo aluno) -> emprestimo
     // Usa LEFT JOIN pra turma aparecer mesmo sem aluno ou sem empréstimo
     // COUNT(DISTINCT ...) conta sem repetir (cada aluno/empréstimo uma vez só)
     // Os SUM(CASE...) contam quantos estão ativos, atrasados e concluídos
@@ -136,7 +138,7 @@ if ($relatorioEscolhido === "emprestimos") {
                    COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS concluidos
             FROM turma T
             INNER JOIN curso C ON C.id_curso = T.id_curso
-            LEFT JOIN aluno AL ON AL.id_turma = T.id_turma
+            LEFT JOIN usuario AL ON AL.id_turma = T.id_turma AND AL.tipo_usuario = 'aluno'
             LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
             GROUP BY T.id_turma, C.nome_curso, T.turno, T.ano_calendario, T.periodo_letivo
             ORDER BY C.nome_curso, T.ano_calendario DESC, T.turno";
@@ -157,7 +159,7 @@ if ($relatorioEscolhido === "emprestimos") {
                    COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS concluidos
             FROM curso C
             LEFT JOIN turma T ON T.id_curso = C.id_curso
-            LEFT JOIN aluno AL ON AL.id_turma = T.id_turma
+            LEFT JOIN usuario AL ON AL.id_turma = T.id_turma AND AL.tipo_usuario = 'aluno'
             LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
             GROUP BY C.id_curso, C.nome_curso, C.Mtec
             ORDER BY C.nome_curso";
@@ -165,42 +167,43 @@ if ($relatorioEscolhido === "emprestimos") {
 // ---- Relatório 5: empréstimos pela situação do aluno ----
 } elseif ($relatorioEscolhido === "situacao") {
     $titulo = "Empréstimos por Situação do Aluno";
-    // Agrupa pela situação do aluno (ex: cursando, formado...)
-    // Se a situação for NULL, o COALESCE mostra 'Não informado'
-    $sql = "SELECT COALESCE(AL.situacao, 'Não informado') AS situacao,
+    // Agrupa pela situação da conta do aluno na tabela unificada usuario (Ativo / Inativo)
+    $sql = "SELECT IF(AL.ativo = 1, 'Ativo', 'Inativo') AS situacao,
                    COUNT(DISTINCT AL.RA) AS total_alunos,
                    COUNT(DISTINCT E.id_emprestimo) AS total_emprestimos,
                    COALESCE(SUM(CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista >= CURDATE() THEN 1 ELSE 0 END), 0) AS ativos,
                    COALESCE(SUM(CASE WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 1 ELSE 0 END), 0) AS atrasados,
                    COALESCE(SUM(CASE WHEN E.emp_ativo = 0 AND E.data_dev IS NOT NULL THEN 1 ELSE 0 END), 0) AS concluidos
-            FROM aluno AL
+            FROM usuario AL
             LEFT JOIN emprestimo E ON E.id_usuario = AL.id_usuario
-            GROUP BY AL.situacao
-            ORDER BY AL.situacao";
+            WHERE AL.tipo_usuario = 'aluno'
+            GROUP BY AL.ativo
+            ORDER BY situacao";
 
 // ---- Relatório 6: histórico completo (o mais detalhado) ----
 } elseif ($relatorioEscolhido === "historico") {
     $titulo = "Histórico Detalhado de Empréstimos";
-    // Junta várias tabelas: emprestimo, usuario, aluno, turma, curso e livros
-    // Usa LEFT JOIN no aluno/turma/curso porque nem todo usuário é aluno
+    // Junta várias tabelas: emprestimo, usuario (unificado), turma, curso e livros
+    // Usa LEFT JOIN em turma/curso porque nem todo usuário é aluno
     // (quem não é aluno fica com '-' no lugar, por causa do COALESCE)
     // A multa é formatada em reais: FORMAT põe 2 casas decimais e
     // o REPLACE troca o ponto pela vírgula
-    // No status entra mais uma opção: 'Aguardando aprovação' (reserva)
+    // No status distingue renovação pendente de reserva inicial pendente
     $sql = "SELECT E.id_emprestimo,
                    U.id_usuario,
                    U.nome AS usuario,
                    U.tipo_usuario AS tipo,
-                   COALESCE(AL.RA, '-') AS ra,
+                   COALESCE(CAST(U.RA AS CHAR), '-') AS ra,
                    COALESCE(C.nome_curso, '-') AS curso,
                    COALESCE(T.turno, '-') AS turno,
-                   COALESCE(AL.situacao, '-') AS situacao_aluno,
+                   CASE WHEN U.tipo_usuario = 'aluno' THEN IF(U.ativo = 1, 'Ativo', 'Inativo') ELSE '-' END AS situacao_aluno,
                    L.titulo AS livro,
                    DATE_FORMAT(E.data_emp, '%d/%m/%Y') AS data_emprestimo,
                    DATE_FORMAT(E.data_dev_prevista, '%d/%m/%Y') AS data_prevista,
                    IF(E.data_dev IS NOT NULL, DATE_FORMAT(E.data_dev, '%d/%m/%Y'), '-') AS devolucao,
                    CONCAT('R$ ', REPLACE(FORMAT(E.valor_multa, 2), '.', ',')) AS multa,
                    CASE
+                       WHEN E.emp_ativo = 1 AND E.reserva = 1 THEN 'Aguardando aprovação de renovação'
                        WHEN E.reserva = 1 THEN 'Aguardando aprovação'
                        WHEN E.emp_ativo = 1 AND E.data_dev IS NULL AND E.data_dev_prevista < CURDATE() THEN 'Atrasado'
                        WHEN E.emp_ativo = 1 AND E.data_dev IS NULL THEN 'Ativo'
@@ -208,8 +211,7 @@ if ($relatorioEscolhido === "emprestimos") {
                    END AS status
             FROM emprestimo E
             INNER JOIN usuario U ON U.id_usuario = E.id_usuario
-            LEFT JOIN aluno AL ON AL.id_usuario = U.id_usuario
-            LEFT JOIN turma T ON T.id_turma = AL.id_turma
+            LEFT JOIN turma T ON T.id_turma = U.id_turma
             LEFT JOIN curso C ON C.id_curso = T.id_curso
             INNER JOIN livros L ON L.id_livro = E.id_livro
             ORDER BY E.data_emp DESC, E.id_emprestimo DESC";
@@ -242,58 +244,154 @@ $linhas = $conexao->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+<!-- Cabeçalho da página e importação do CSS -->
 <head>
     <?= sem_cache_js() ?>
     <meta charset="UTF-8">
-    <title>Relatórios - Biblioteca Virtual</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Estilos globais e estilo do relatório -->
+    <link rel="stylesheet" href="./CSS/principal.css">
+    <link rel="stylesheet" href="./CSS/relatorio.css">
+    <title>Relatórios - Bibliotech</title>
 </head>
 <body>
-    <h2>Relatórios</h2>
 
-    <!-- BLOCO 6 - MENU: links que mudam o relatório pela URL (?relatorio=...) -->
-    <p>
-        <a href="?relatorio=populares">Livros populares</a> |
-        <a href="?relatorio=emprestimos">Empréstimos</a> |
-        <a href="?relatorio=usuarios">Usuários ativos</a> |
-        <a href="?relatorio=turma">Por turma</a> |
-        <a href="?relatorio=curso">Por curso</a> |
-        <a href="?relatorio=situacao">Por situação</a> |
-        <a href="?relatorio=historico">Histórico detalhado</a>
+    <!-- RENDER BACKGROUND -->
+    <div class="RENDER BACKGROUND">
+        <img src="./source/Arthur/home/Group 631.png" alt="Background">
+    </div>
+
+<!-- Container principal dos relatórios -->
+<main class="relatorios">
+
+    <!-- Botão de voltar ao menu principal -->
+    <a class="voltar" href="principal.php">
+        &larr; Voltar ao menu principal
+    </a>
+
+    <!-- Título e descrição da página -->
+    <h1>Relatórios</h1>
+
+    <p class="descricao">
+        Consulte os empréstimos, as turmas, os cursos e a situação
+        dos registros da biblioteca.
     </p>
 
-    <!-- Mostra o título do relatório escolhido -->
-    <!-- htmlspecialchars transforma caracteres especiais (< > " ') em texto normal,
-         pra ninguém conseguir colocar código malicioso na tela -->
-    <h3><?= htmlspecialchars($titulo, ENT_QUOTES, "UTF-8") ?></h3>
+    <!-- BLOCO 6 - MENU: links que mudam o relatório pela URL (?relatorio=...) -->
+    <!-- Botões de filtro dos relatórios -->
+    <nav class="menu-relatorios" aria-label="Tipos de relatório">
+        <a class="btn-relatorio" href="?relatorio=todos" id="btn-todos-relatorios">Todos os relatórios</a>
+        <a class="btn-relatorio" href="?relatorio=populares">Livros populares</a>
+        <a class="btn-relatorio" href="?relatorio=emprestimos">Empréstimos</a>
+        <a class="btn-relatorio" href="?relatorio=usuarios">Usuários ativos</a>
+        <a class="btn-relatorio" href="?relatorio=turma">Por turma</a>
+        <a class="btn-relatorio" href="?relatorio=curso">Por curso</a>
+        <a class="btn-relatorio" href="?relatorio=situacao">Por situação</a>
+        <a class="btn-relatorio" href="?relatorio=historico">Histórico detalhado</a>
+    </nav>
 
-    <!-- BLOCO 7 - TABELA: montada de forma automática -->
-    <table border="1" cellpadding="6">
+    <!-- Botões de ação (Imprimir e Salvar) -->
+    <div class="acoes-relatorio">
+        <button type="button" class="btn-acao-relatorio" id="btn-imprimir">
+            🖨️ Imprimir relatório
+        </button>
+        <button type="button" class="btn-acao-relatorio btn-salvar-relatorio" id="btn-salvar">
+            💾 Salvar relatório
+        </button>
+    </div>
+
+    <!-- Área de conteúdo da tabela do relatório -->
+    <div id="conteudo-relatorio">
+        <!-- Cabeçalho do relatório com título e barra de pesquisa ao lado -->
+        <div class="cabecalho-tabela-relatorio">
+            <!-- Mostra o título do relatório escolhido -->
+            <!-- htmlspecialchars transforma caracteres especiais (< > " ') em texto normal,
+                 pra ninguém conseguir colocar código malicioso na tela -->
+            <h2><?= htmlspecialchars($titulo, ENT_QUOTES, "UTF-8") ?></h2>
+
+            <!-- Barra de pesquisa do relatório -->
+            <div class="search-input-wrapper">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+                <input
+                    type="search"
+                    class="search-input input-busca-relatorio"
+                    placeholder="Pesquisar neste relatório..."
+                    aria-label="Pesquisar no relatório"
+                >
+            </div>
+        </div>
+
+        <!-- BLOCO 7 - TABELA: montada de forma automática -->
         <!-- Se o array tem alguma linha, monta a tabela. Se não, cai no else lá embaixo -->
         <?php if (!empty($linhas)): ?>
-            <tr>
-                <!-- Cabeçalho: pega o nome das colunas da primeira linha (array_keys)
-                     por isso a tabela serve pra qualquer relatório -->
-                <?php foreach (array_keys($linhas[0]) as $coluna): ?>
-                    <th><?= htmlspecialchars((string) $coluna, ENT_QUOTES, "UTF-8") ?></th>
-                <?php endforeach; ?>
-            </tr>
-            <!-- Corpo: o primeiro foreach cria uma linha (tr) pra cada registro -->
-            <?php foreach ($linhas as $linha): ?>
-                <tr>
-                    <!-- O segundo foreach cria uma célula (td) pra cada valor da linha -->
-                    <?php foreach ($linha as $valor): ?>
-                        <td><?= htmlspecialchars((string) $valor, ENT_QUOTES, "UTF-8") ?></td>
-                    <?php endforeach; ?>
-                </tr>
-            <?php endforeach; ?>
+            <!-- Container com rolagem horizontal para a tabela -->
+            <div class="tabela-container">
+                <table class="tabela-relatorios">
+                    <!-- Cabeçalho da tabela -->
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalho: pega o nome das colunas da primeira linha (array_keys)
+                                 por isso a tabela serve pra qualquer relatório -->
+                            <?php foreach (array_keys($linhas[0]) as $coluna): ?>
+                                <th scope="col"><?= htmlspecialchars((string) $coluna, ENT_QUOTES, "UTF-8") ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <!-- Corpo da tabela -->
+                    <tbody>
+                        <!-- Corpo: o primeiro foreach cria uma linha (tr) pra cada registro -->
+                        <?php foreach ($linhas as $linha): ?>
+                            <tr>
+                                <!-- O segundo foreach cria uma célula (td) pra cada valor da linha -->
+                                <?php foreach ($linha as $valor): ?>
+                                    <td><?= htmlspecialchars((string) $valor, ENT_QUOTES, "UTF-8") ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php else: ?>
             <!-- Se a consulta não trouxe nada, mostra essa mensagem -->
-            <tr>
-                <td style="padding: 15px; text-align: center;">Nenhum registro encontrado para este relatório.</td>
-            </tr>
+            <p class="mensagem-vazia">
+                Nenhum registro encontrado para este relatório.
+            </p>
         <?php endif; ?>
-    </table>
+    </div>
 
-    <p><a href="principal.php">Voltar</a></p>
+</main>
+
+<!-- Hotbar global de navegação -->
+<nav class="global-hotbar">
+    <!-- Botão Início (Painel) -->
+    <a href="principal.php" class="hotbar-item">
+        <span class="hotbar-icon">🏠</span>
+        <span class="hotbar-text">Início</span>
+    </a>
+
+    <!-- Botão Acervo -->
+    <a href="livros.php" class="hotbar-item">
+        <span class="hotbar-icon">📚</span>
+        <span class="hotbar-text">Acervo</span>
+    </a>
+
+    <!-- Botão Notificações -->
+    <a href="notificacoes.php" class="hotbar-item">
+        <div class="hotbar-icon-wrapper">
+            <span class="hotbar-icon">🔔</span>
+        </div>
+        <span class="hotbar-text">Avisos</span>
+    </a>
+
+    <!-- Botão Sair -->
+    <a href="logout.php" class="hotbar-item hotbar-logout">
+        <span class="hotbar-icon">🚪</span>
+        <span class="hotbar-text">Sair</span>
+    </a>
+</nav>
+
+<!-- Script de interação dos relatórios -->
+<script src="./javascript/relatorio.js"></script>
+
 </body>
 </html>

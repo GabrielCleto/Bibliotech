@@ -31,9 +31,9 @@ session_write_close();
 if (!$tokenValido) {
     $resultado = ["sucesso" => false, "mensagem" => "Sessão expirada ou inválida. Tente novamente."];
 } else {
-    $idLivro = (int) ($_POST["id_livro"] ?? 0);
-    $logica = new Emprestimo(Conexao::getConexao());
-    $resultado = $logica->solicitarEmprestimo($idUsuario, $idLivro);
+    $idLivro = is_scalar($_POST["id_livro"] ?? null) ? (int) $_POST["id_livro"] : 0;
+    $logica = new Emprestimo($conexao);
+    $resultado = $logica->solicitarEmprestimo((int) $idUsuario, $idLivro);
 }
 ?>
 <!DOCTYPE html>
